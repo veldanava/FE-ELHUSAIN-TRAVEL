@@ -8,6 +8,7 @@ import {
   Users,
   BarChart3,
   LogOut,
+  FolderOpen,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -36,6 +37,11 @@ const menuItems = [
     title: "Paket Wisata",
     url: "/dashboard/paket",
     icon: Package,
+  },
+  {
+    title: "Kategori",
+    url: "/dashboard/categories",
+    icon: FolderOpen,
   },
   {
     title: "Users",

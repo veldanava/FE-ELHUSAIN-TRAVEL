@@ -5,18 +5,26 @@ import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import type { Category } from "./use-categories";
 
+export interface PackageImage {
+  id: number;
+  imageUrl: string;
+  displayOrder: number;
+  packageId: number;
+}
+
 export interface TourPackage {
   id: number;
   title: string;
   slug: string;
   shortDescription: string;
   fullDescription: string;
-  price: number;
+  price: string | number; // API returns string, but we'll handle both
   duration: string;
   mainImageUrl: string;
   categoryId: number;
   isActive: boolean;
   category?: Category;
+  images?: PackageImage[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -37,33 +45,71 @@ export interface UpdatePackageData extends CreatePackageData {
   id: number;
 }
 
+export interface PackagesResponse {
+  message: string;
+  meta: {
+    page: number;
+    limit: number;
+    count: number;
+  };
+  data: TourPackage[];
+}
+
 export function usePackages() {
   const [packages, setPackages] = useState<TourPackage[]>([]);
+  const [meta, setMeta] = useState({
+    page: 1,
+    limit: 10,
+    count: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const { admin } = useAuth();
-  const API_HOST = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3000";
+  const API_HOST =
+    process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3000/api";
 
-  const fetchPackages = async () => {
+  const fetchPackages = async (page = 1, limit = 10) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_HOST}/api/tour-packages`, {
-        headers: {
-          Authorization: `Bearer ${admin?.token}`,
-        },
-      });
+
+      const response = await fetch(
+        `${API_HOST}/tour-packages?page=${page}&limit=${limit}`,
+        {
+          headers: {
+            Authorization: `Bearer ${admin?.token}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch packages");
       }
 
-      const data = await response.json();
-      setPackages(data);
+      const result: PackagesResponse = await response.json();
+
+      // Handle the nested response structure
+      const packagesArray = Array.isArray(result.data) ? result.data : [];
+
+      // Normalize price to number for internal use
+      const normalizedPackages = packagesArray.map((pkg) => ({
+        ...pkg,
+        price:
+          typeof pkg.price === "string"
+            ? Number.parseFloat(pkg.price)
+            : pkg.price,
+      }));
+
+      setPackages(normalizedPackages);
+      setMeta(result.meta);
     } catch (error) {
-      toast.error("Gagal mengambil paket wisata");
       console.error("Error fetching packages:", error);
+      // Ensure packages remains an empty array on error
+      setPackages([]);
+      toast.error(
+        error instanceof Error ? error.message : "Gagal mengambil paket wisata"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +118,7 @@ export function usePackages() {
   const createPackage = async (packageData: CreatePackageData) => {
     try {
       setIsCreating(true);
+
       const response = await fetch(`${API_HOST}/tour-packages`, {
         method: "POST",
         headers: {
@@ -86,12 +133,24 @@ export function usePackages() {
         throw new Error(errorData.message || "Failed to create package");
       }
 
-      const newPackage = await response.json();
-      setPackages((prev) => [newPackage, ...prev]);
+      const result = await response.json();
+      const newPackage = result.data || result;
+
+      // Normalize price
+      const normalizedPackage = {
+        ...newPackage,
+        price:
+          typeof newPackage.price === "string"
+            ? Number.parseFloat(newPackage.price)
+            : newPackage.price,
+      };
+
+      setPackages((prev) => [normalizedPackage, ...prev]);
+      setMeta((prev) => ({ ...prev, count: prev.count + 1 }));
 
       toast.success("Paket wisata berhasil ditambahkan");
 
-      return newPackage;
+      return normalizedPackage;
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -107,6 +166,7 @@ export function usePackages() {
   const updatePackage = async (packageData: UpdatePackageData) => {
     try {
       setIsUpdating(true);
+
       const response = await fetch(
         `${API_HOST}/tour-packages/${packageData.id}`,
         {
@@ -124,14 +184,25 @@ export function usePackages() {
         throw new Error(errorData.message || "Failed to update package");
       }
 
-      const updatedPackage = await response.json();
+      const result = await response.json();
+      const updatedPackage = result.data || result;
+
+      // Normalize price
+      const normalizedPackage = {
+        ...updatedPackage,
+        price:
+          typeof updatedPackage.price === "string"
+            ? Number.parseFloat(updatedPackage.price)
+            : updatedPackage.price,
+      };
+
       setPackages((prev) =>
-        prev.map((pkg) => (pkg.id === packageData.id ? updatedPackage : pkg))
+        prev.map((pkg) => (pkg.id === packageData.id ? normalizedPackage : pkg))
       );
 
       toast.success("Paket wisata berhasil diupdate");
 
-      return updatedPackage;
+      return normalizedPackage;
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Gagal mengupdate paket wisata"
@@ -145,7 +216,8 @@ export function usePackages() {
   const deletePackage = async (id: number) => {
     try {
       setIsDeleting(id);
-      const response = await fetch(`${packages}/tour-packages/${id}`, {
+
+      const response = await fetch(`${API_HOST}/tour-packages/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${admin?.token}`,
@@ -158,6 +230,7 @@ export function usePackages() {
       }
 
       setPackages((prev) => prev.filter((pkg) => pkg.id !== id));
+      setMeta((prev) => ({ ...prev, count: Math.max(0, prev.count - 1) }));
 
       toast.success("Paket wisata berhasil dihapus");
     } catch (error) {
@@ -178,6 +251,7 @@ export function usePackages() {
 
   return {
     packages,
+    meta,
     isLoading,
     isCreating,
     isUpdating,
