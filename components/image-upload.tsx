@@ -17,6 +17,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import { usePackageImages } from "@/hooks/use-package-image";
+import Image from "next/image";
 
 interface ImageUploadProps {
   packageId: number;
@@ -161,7 +162,7 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
               <Card key={image.id} className="relative">
                 <CardContent className="p-2">
                   <div className="aspect-video relative bg-muted rounded overflow-hidden">
-                    <img
+                    <Image
                       src={image.imageUrl || "/placeholder.svg"}
                       alt={`Package image ${image.displayOrder}`}
                       className="w-full h-full object-cover"
@@ -262,7 +263,7 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
                 <CardContent className="p-2">
                   <div className="aspect-video relative bg-muted rounded overflow-hidden">
                     {file.preview ? (
-                      <img
+                      <Image
                         src={file.preview || "/placeholder.svg"}
                         alt={`Preview ${index + 1}`}
                         className="w-full h-full object-cover"

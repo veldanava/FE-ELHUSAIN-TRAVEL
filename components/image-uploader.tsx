@@ -13,6 +13,7 @@ import { usePackageImages } from "@/hooks/use-package-image";
 
 // Remove local PackageImage interface and import it from the hook
 import type { PackageImage } from "@/hooks/use-package-image";
+import Image from "next/image";
 
 interface ImageUploadProps {
   packageId: number;
@@ -147,7 +148,9 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
                 <CardContent className="p-2">
                   <div className="aspect-video relative bg-muted rounded overflow-hidden">
                     {file.preview ? (
-                      <img
+                      <Image
+                        width={500}
+                        height={300}
                         src={file.preview || "/placeholder.svg"}
                         alt={`Preview ${index + 1}`}
                         className="w-full h-full object-cover"
