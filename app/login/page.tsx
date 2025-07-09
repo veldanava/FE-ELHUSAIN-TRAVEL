@@ -1,6 +1,6 @@
 import { GalleryVerticalEnd } from "lucide-react";
 import { Toaster } from "sonner";
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/components/dashboard/login-form";
 import Image from "next/image";
 
 export default function LoginPage() {

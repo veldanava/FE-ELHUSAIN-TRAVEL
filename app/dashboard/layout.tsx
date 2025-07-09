@@ -10,7 +10,7 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,

@@ -34,8 +34,8 @@ import {
   type CreatePackageData,
   type UpdatePackageData,
 } from "@/hooks/use-package";
-import { PackageForm } from "@/components/package-form";
-import { ImageUpload } from "@/components/image-uploader";
+import { PackageForm } from "@/components/dashboard/package-form";
+import { ImageUpload } from "@/components/dashboard/image-uploader";
 
 export default function PaketPage() {
   const {

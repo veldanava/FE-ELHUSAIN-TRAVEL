@@ -1,4 +1,4 @@
-import { CategoryManagement } from "@/components/category-management";
+import { CategoryManagement } from "@/components/dashboard/category-management";
 
 export default function CategoriesPage() {
   return (
