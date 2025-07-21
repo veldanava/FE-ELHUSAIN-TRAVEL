@@ -153,7 +153,7 @@ export function usePackageImages(packageId?: number) {
       if (!admin?.token) throw new Error("Admin token not available.");
 
       const response = await fetch(
-        `${API_HOST}/tour-packages/images/${imageId}`,
+        `${API_HOST}/tour-packages/${packageId}/images/${imageId}`,
         {
           method: "DELETE",
           headers: {
