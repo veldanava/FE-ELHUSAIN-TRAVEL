@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // hooks/use-package.ts
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Category } from "./use-categories"; // Pastikan path ini benar
+import type { Category } from "./use-categories";
 import { useEffect } from "react";
 
 export interface PackageImage {
@@ -21,15 +20,15 @@ export interface TourPackage {
   slug: string;
   shortDescription: string;
   fullDescription: string;
-  price: number; // Normalisasi ke number di sini karena kita akan memparsingnya
+  price: number;
   duration: string;
-  mainImageUrl: string | null; // Bisa null jika belum ada gambar utama
+  mainImageUrl: string | null;
   categoryId: number;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
-  category?: Category; // Menjamin Category terdefinisi
-  images?: PackageImage[]; // Menjamin images terdefinisi
+  category?: Category;
+  images?: PackageImage[];
 }
 
 export interface CreatePackageData {
@@ -39,12 +38,11 @@ export interface CreatePackageData {
   fullDescription: string;
   price: number;
   duration: string;
-  mainImageUrl: string; // Saat membuat/mengupdate paket, ini akan kosong atau diambil dari form lain
+  mainImageUrl: string;
   categoryId: number;
   isActive: boolean;
 }
 
-// UpdatePackageData sekarang hanya perlu id dan properti yang opsional untuk diupdate
 export interface UpdatePackageData extends Partial<CreatePackageData> {
   id: number;
 }
@@ -59,9 +57,17 @@ export interface PackagesResponse {
   data: TourPackage[];
 }
 
-export function usePackages() {
+// Tambahkan interface untuk opsi hook
+interface UsePackagesOptions {
+  forAdmin?: boolean; // True jika hook digunakan di halaman admin (membutuhkan token)
+  limit?: number; // Batasan jumlah paket yang diambil
+  isActive?: boolean; // Filter untuk paket yang aktif
+}
+
+// Sesuaikan tanda tangan fungsi usePackages
+export function usePackages(options?: UsePackagesOptions) {
   const { admin } = useAuth();
-  const queryClient = useQueryClient(); // Inisialisasi query client
+  const queryClient = useQueryClient();
   const API_HOST =
     process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3000/api";
 
@@ -70,27 +76,49 @@ export function usePackages() {
     data: packages,
     isLoading,
     error,
-    isRefetching, // Untuk indikator refetching
+    isRefetching,
   } = useQuery<TourPackage[], Error>({
-    queryKey: ["tourPackages"], // Kunci unik untuk cache query ini
+    // Tambahkan opsi ke queryKey agar cache terpisah untuk setiap kombinasi opsi
+    queryKey: [
+      "tourPackages",
+      options?.forAdmin,
+      options?.limit,
+      options?.isActive,
+    ],
     queryFn: async () => {
-      if (!admin?.token) {
-        // Jika token admin tidak ada, kita bisa throw error atau return empty array
-        // Untuk menghindari fetch yang tidak perlu atau error pada saat login belum lengkap
-        return [];
+      let headers: HeadersInit = {};
+      // Jika hook dimaksudkan untuk admin DAN token tidak ada, lempar error
+      if (options?.forAdmin && !admin?.token) {
+        throw new Error("Admin token not available for admin operations.");
       }
-      const response = await fetch(`${API_HOST}/tour-packages`, {
-        headers: {
-          Authorization: `Bearer ${admin.token}`,
-        },
-      });
+      // Jika token admin ada (baik untuk admin view atau jika token tersedia di public view), tambahkan header
+      if (admin?.token) {
+        headers = { Authorization: `Bearer ${admin.token}` };
+      }
+
+      // Bangun URL dengan parameter query
+      const params = new URLSearchParams();
+      if (options?.limit) {
+        params.append("limit", options.limit.toString());
+      }
+      // Tambahkan filter isActive jika dispesifikasikan dan bernilai boolean
+      if (typeof options?.isActive === "boolean") {
+        params.append("isActive", options.isActive.toString());
+      }
+
+      const queryString = params.toString();
+      const url = `${API_HOST}/tour-packages${
+        queryString ? `?${queryString}` : ""
+      }`;
+
+      const response = await fetch(url, { headers });
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Gagal mengambil paket wisata");
       }
       const result: PackagesResponse = await response.json();
 
-      // Normalisasi price ke number
       const normalizedPackages = (result.data || []).map((pkg) => ({
         ...pkg,
         price:
@@ -98,17 +126,24 @@ export function usePackages() {
             ? Number.parseFloat(pkg.price)
             : pkg.price,
       }));
-      return normalizedPackages;
+
+      // Filter isActive di frontend jika tidak difilter di backend (atau sebagai fallback)
+      return options?.isActive !== undefined
+        ? normalizedPackages.filter((pkg) => pkg.isActive === options.isActive)
+        : normalizedPackages;
     },
-    enabled: !!admin?.token, // Query hanya akan dijalankan jika admin.token tersedia
-    staleTime: 1000 * 60 * 5, // Data dianggap "stale" setelah 5 menit
-    placeholderData: [], // Memberikan data awal kosong saat loading
+    // Query hanya akan dijalankan jika:
+    // 1. Bukan untuk admin (true secara default)
+    // 2. Atau jika untuk admin DAN admin.token tersedia
+    enabled: options?.forAdmin ? !!admin?.token : true,
+    staleTime: 1000 * 60 * 5,
+    placeholderData: [],
     select: (data) =>
       data.sort((a, b) =>
         b.createdAt && a.createdAt
           ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           : 0
-      ), // Opsional: mengurutkan data berdasarkan createdAt secara descending
+      ),
   });
 
   // Efek samping untuk menampilkan error dari query
@@ -150,7 +185,7 @@ export function usePackages() {
             : newPackage.price,
       };
     },
-    onSuccess: (newPackage) => {
+    onSuccess: () => {
       // Invalidate query untuk me-refetch daftar paket secara otomatis
       queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
       toast.success("Paket wisata berhasil ditambahkan!");
@@ -225,7 +260,7 @@ export function usePackages() {
         throw new Error(errorData.message || "Gagal menghapus paket wisata");
       }
     },
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       // Invalidate query untuk me-refetch daftar paket
       queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
       toast.success("Paket wisata berhasil dihapus!");
@@ -284,22 +319,21 @@ export function usePackages() {
   });
 
   return {
-    packages: packages || [], // Pastikan selalu mengembalikan array
+    packages: packages || [],
     meta: {
-      // Kembalikan meta data (jika Anda masih ingin menggunakannya untuk pagination di komponen lain)
-      page: 1, // Jika tidak ada pagination di useQuery, set default
-      limit: 10,
+      page: 1,
+      limit: options?.limit || 10, // Sesuaikan limit di meta
       count: packages?.length || 0,
     },
-    isLoading: isLoading || isRefetching, // Gabungkan isLoading dan isRefetching
+    isLoading: isLoading || isRefetching,
     isCreating: createPackageMutation.isPending,
     isUpdating: updatePackageMutation.isPending,
     isDeleting: deletePackageMutation.isPending
       ? deletePackageMutation.variables
-      : null, // Mengidentifikasi ID yang sedang dihapus
-    createPackage: createPackageMutation.mutateAsync, // Menggunakan mutateAsync untuk await
+      : null,
+    createPackage: createPackageMutation.mutateAsync,
     updatePackage: updatePackageMutation.mutateAsync,
     deletePackage: deletePackageMutation.mutateAsync,
-    updateMainImage: updateMainImageMutation.mutateAsync, // Export mutasi baru
+    updateMainImage: updateMainImageMutation.mutateAsync,
   };
 }
