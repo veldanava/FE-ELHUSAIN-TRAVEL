@@ -1,3 +1,4 @@
+// components/dashboard/package-form.tsx
 "use client";
 
 import type React from "react";
@@ -18,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { useCategories } from "@/hooks/use-categories";
-import type { TourPackage, CreatePackageData } from "@/hooks/use-package";
+import type { TourPackage, CreatePackageData } from "@/hooks/use-package"; // Pastikan TourPackage dan CreatePackageData sudah diimpor dengan benar
 
 interface PackageFormProps {
   package?: TourPackage | null;
@@ -41,7 +42,7 @@ export function PackageForm({
     fullDescription: "",
     price: 0,
     duration: "",
-    mainImageUrl: "",
+    mainImageUrl: "", // Nilai awal kosong atau string kosong
     categoryId: 0,
     isActive: true,
   });
@@ -55,7 +56,7 @@ export function PackageForm({
         fullDescription: editPackage.fullDescription,
         price: Number(editPackage.price),
         duration: editPackage.duration,
-        mainImageUrl: editPackage.mainImageUrl,
+        mainImageUrl: editPackage.mainImageUrl || "", // Pastikan selalu string
         categoryId: editPackage.categoryId,
         isActive: editPackage.isActive,
       });
@@ -92,7 +93,7 @@ export function PackageForm({
     setFormData((prev) => ({
       ...prev,
       title,
-      slug: !editPackage ? generateSlug(title) : prev.slug,
+      slug: !editPackage ? generateSlug(title) : prev.slug, // Hanya generate slug jika membuat paket baru
     }));
   };
 
@@ -186,41 +187,41 @@ export function PackageForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="mainImageUrl">URL Gambar Utama *</Label>
-          <Input
-            id="mainImageUrl"
-            value={formData.mainImageUrl}
-            onChange={(e) =>
-              setFormData({ ...formData, mainImageUrl: e.target.value })
-            }
-            placeholder="/uploads/packages/1/main-image.jpg"
-            required
-            disabled={isLoading}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="categoryId">Kategori *</Label>
-          <Select
-            value={formData.categoryId.toString()}
-            onValueChange={(value) =>
-              setFormData({ ...formData, categoryId: Number.parseInt(value) })
-            }
-            disabled={isLoading || categoriesLoading}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Pilih kategori" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id.toString()}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Input mainImageUrl dihapus dari sini */}
+      {/* <div className="space-y-2">
+        <Label htmlFor="mainImageUrl">URL Gambar Utama *</Label>
+        <Input
+          id="mainImageUrl"
+          value={formData.mainImageUrl}
+          onChange={(e) =>
+            setFormData({ ...formData, mainImageUrl: e.target.value })
+          }
+          placeholder="/uploads/packages/1/main-image.jpg"
+          required
+          disabled={isLoading}
+        />
+      </div> */}
+
+      <div className="space-y-2">
+        <Label htmlFor="categoryId">Kategori *</Label>
+        <Select
+          value={formData.categoryId.toString()}
+          onValueChange={(value) =>
+            setFormData({ ...formData, categoryId: Number.parseInt(value) })
+          }
+          disabled={isLoading || categoriesLoading}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih kategori" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id.toString()}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex items-center space-x-2">

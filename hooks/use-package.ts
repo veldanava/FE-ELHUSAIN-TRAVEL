@@ -1,9 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// hooks/use-package.ts
 "use client";
 
-import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
-import type { Category } from "./use-categories";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Category } from "./use-categories"; // Pastikan path ini benar
+import { useEffect } from "react";
 
 export interface PackageImage {
   id: number;
@@ -18,15 +21,15 @@ export interface TourPackage {
   slug: string;
   shortDescription: string;
   fullDescription: string;
-  price: string | number; // API returns string, but we'll handle both
+  price: number; // Normalisasi ke number di sini karena kita akan memparsingnya
   duration: string;
-  mainImageUrl: string;
+  mainImageUrl: string | null; // Bisa null jika belum ada gambar utama
   categoryId: number;
   isActive: boolean;
-  category?: Category;
-  images?: PackageImage[];
   createdAt?: string;
   updatedAt?: string;
+  category?: Category; // Menjamin Category terdefinisi
+  images?: PackageImage[]; // Menjamin images terdefinisi
 }
 
 export interface CreatePackageData {
@@ -36,12 +39,13 @@ export interface CreatePackageData {
   fullDescription: string;
   price: number;
   duration: string;
-  mainImageUrl: string;
+  mainImageUrl: string; // Saat membuat/mengupdate paket, ini akan kosong atau diambil dari form lain
   categoryId: number;
   isActive: boolean;
 }
 
-export interface UpdatePackageData extends CreatePackageData {
+// UpdatePackageData sekarang hanya perlu id dan properti yang opsional untuk diupdate
+export interface UpdatePackageData extends Partial<CreatePackageData> {
   id: number;
 }
 
@@ -56,124 +60,121 @@ export interface PackagesResponse {
 }
 
 export function usePackages() {
-  const [packages, setPackages] = useState<TourPackage[]>([]);
-  const [meta, setMeta] = useState({
-    page: 1,
-    limit: 10,
-    count: 0,
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const { admin } = useAuth();
+  const queryClient = useQueryClient(); // Inisialisasi query client
   const API_HOST =
     process.env.NEXT_PUBLIC_API_HOST || "http://localhost:3000/api";
 
-  const fetchPackages = async (page = 1, limit = 10) => {
-    try {
-      setIsLoading(true);
-
-      const response = await fetch(
-        `${API_HOST}/tour-packages?page=${page}&limit=${limit}`,
-        {
-          headers: {
-            Authorization: `Bearer ${admin?.token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch packages");
+  // --- QUERY UNTUK MENGAMBIL DAFTAR PAKET ---
+  const {
+    data: packages,
+    isLoading,
+    error,
+    isRefetching, // Untuk indikator refetching
+  } = useQuery<TourPackage[], Error>({
+    queryKey: ["tourPackages"], // Kunci unik untuk cache query ini
+    queryFn: async () => {
+      if (!admin?.token) {
+        // Jika token admin tidak ada, kita bisa throw error atau return empty array
+        // Untuk menghindari fetch yang tidak perlu atau error pada saat login belum lengkap
+        return [];
       }
-
+      const response = await fetch(`${API_HOST}/tour-packages`, {
+        headers: {
+          Authorization: `Bearer ${admin.token}`,
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal mengambil paket wisata");
+      }
       const result: PackagesResponse = await response.json();
 
-      // Handle the nested response structure
-      const packagesArray = Array.isArray(result.data) ? result.data : [];
-
-      // Normalize price to number for internal use
-      const normalizedPackages = packagesArray.map((pkg) => ({
+      // Normalisasi price ke number
+      const normalizedPackages = (result.data || []).map((pkg) => ({
         ...pkg,
         price:
           typeof pkg.price === "string"
             ? Number.parseFloat(pkg.price)
             : pkg.price,
       }));
+      return normalizedPackages;
+    },
+    enabled: !!admin?.token, // Query hanya akan dijalankan jika admin.token tersedia
+    staleTime: 1000 * 60 * 5, // Data dianggap "stale" setelah 5 menit
+    placeholderData: [], // Memberikan data awal kosong saat loading
+    select: (data) =>
+      data.sort((a, b) =>
+        b.createdAt && a.createdAt
+          ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          : 0
+      ), // Opsional: mengurutkan data berdasarkan createdAt secara descending
+  });
 
-      setPackages(normalizedPackages);
-      setMeta(result.meta);
-    } catch (error) {
-      console.error("Error fetching packages:", error);
-      // Ensure packages remains an empty array on error
-      setPackages([]);
-      toast.error(
-        error instanceof Error ? error.message : "Gagal mengambil paket wisata"
-      );
-    } finally {
-      setIsLoading(false);
+  // Efek samping untuk menampilkan error dari query
+  useEffect(() => {
+    if (error) {
+      toast.error(error.message);
     }
-  };
+  }, [error]);
 
-  const createPackage = async (packageData: CreatePackageData) => {
-    try {
-      setIsCreating(true);
-
+  // --- MUTASI UNTUK MEMBUAT PAKET ---
+  const createPackageMutation = useMutation<
+    TourPackage, // Tipe data yang dikembalikan onSuccess
+    Error, // Tipe error
+    CreatePackageData // Tipe argumen untuk mutationFn
+  >({
+    mutationFn: async (packageData) => {
+      if (!admin?.token) throw new Error("Admin token not available.");
       const response = await fetch(`${API_HOST}/tour-packages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${admin?.token}`,
+          Authorization: `Bearer ${admin.token}`,
         },
         body: JSON.stringify(packageData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create package");
+        throw new Error(errorData.message || "Gagal menambahkan paket wisata");
       }
-
       const result = await response.json();
-      const newPackage = result.data || result;
+      const newPackage = result.data || result; // Sesuaikan jika API Anda mengembalikan data langsung
 
-      // Normalize price
-      const normalizedPackage = {
+      return {
         ...newPackage,
         price:
           typeof newPackage.price === "string"
             ? Number.parseFloat(newPackage.price)
             : newPackage.price,
       };
+    },
+    onSuccess: (newPackage) => {
+      // Invalidate query untuk me-refetch daftar paket secara otomatis
+      queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
+      toast.success("Paket wisata berhasil ditambahkan!");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Gagal menambahkan paket wisata.");
+    },
+  });
 
-      setPackages((prev) => [normalizedPackage, ...prev]);
-      setMeta((prev) => ({ ...prev, count: prev.count + 1 }));
-
-      toast.success("Paket wisata berhasil ditambahkan");
-
-      return normalizedPackage;
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Gagal menambahkan paket wisata"
-      );
-      throw error;
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  const updatePackage = async (packageData: UpdatePackageData) => {
-    try {
-      setIsUpdating(true);
-
+  // --- MUTASI UNTUK MENGUPDATE PAKET ---
+  const updatePackageMutation = useMutation<
+    TourPackage, // Tipe data yang dikembalikan onSuccess
+    Error, // Tipe error
+    UpdatePackageData // Tipe argumen untuk mutationFn
+  >({
+    mutationFn: async (packageData) => {
+      if (!admin?.token) throw new Error("Admin token not available.");
       const response = await fetch(
         `${API_HOST}/tour-packages/${packageData.id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${admin?.token}`,
+            Authorization: `Bearer ${admin.token}`,
           },
           body: JSON.stringify(packageData),
         }
@@ -181,84 +182,124 @@ export function usePackages() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update package");
+        throw new Error(errorData.message || "Gagal mengupdate paket wisata");
       }
-
       const result = await response.json();
       const updatedPackage = result.data || result;
 
-      // Normalize price
-      const normalizedPackage = {
+      return {
         ...updatedPackage,
         price:
           typeof updatedPackage.price === "string"
             ? Number.parseFloat(updatedPackage.price)
             : updatedPackage.price,
       };
+    },
+    onSuccess: (updatedPackage) => {
+      // Invalidate query untuk me-refetch daftar paket
+      queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
+      // Opsional: invalidasi query detail paket jika ada
+      queryClient.invalidateQueries({
+        queryKey: ["tourPackage", updatedPackage.id],
+      });
+      toast.success("Paket wisata berhasil diperbarui!");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Gagal mengupdate paket wisata.");
+    },
+  });
 
-      setPackages((prev) =>
-        prev.map((pkg) => (pkg.id === packageData.id ? normalizedPackage : pkg))
-      );
-
-      toast.success("Paket wisata berhasil diupdate");
-
-      return normalizedPackage;
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Gagal mengupdate paket wisata"
-      );
-      throw error;
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const deletePackage = async (id: number) => {
-    try {
-      setIsDeleting(id);
-
+  // --- MUTASI UNTUK MENGHAPUS PAKET ---
+  const deletePackageMutation = useMutation<void, Error, number>({
+    mutationFn: async (id) => {
+      if (!admin?.token) throw new Error("Admin token not available.");
       const response = await fetch(`${API_HOST}/tour-packages/${id}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${admin?.token}`,
+          Authorization: `Bearer ${admin.token}`,
         },
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete package");
+        throw new Error(errorData.message || "Gagal menghapus paket wisata");
+      }
+    },
+    onSuccess: (_, id) => {
+      // Invalidate query untuk me-refetch daftar paket
+      queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
+      toast.success("Paket wisata berhasil dihapus!");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Gagal menghapus paket wisata.");
+    },
+  });
+
+  // --- MUTASI BARU UNTUK UPDATE MAINIMAGEURL ---
+  const updateMainImageMutation = useMutation<
+    TourPackage, // Tipe data yang dikembalikan onSuccess
+    Error, // Tipe error
+    { packageId: number; imageUrl: string } // Tipe argumen untuk mutationFn
+  >({
+    mutationFn: async ({ packageId, imageUrl }) => {
+      if (!admin?.token) throw new Error("Admin token not available.");
+
+      const response = await fetch(`${API_HOST}/tour-packages/${packageId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${admin.token}`,
+        },
+        body: JSON.stringify({ mainImageUrl: imageUrl }), // Hanya kirim mainImageUrl
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Gagal memperbarui gambar utama");
       }
 
-      setPackages((prev) => prev.filter((pkg) => pkg.id !== id));
-      setMeta((prev) => ({ ...prev, count: Math.max(0, prev.count - 1) }));
+      const result = await response.json();
+      const updatedPackage = result.data || result;
 
-      toast.success("Paket wisata berhasil dihapus");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Gagal menghapus paket wisata"
-      );
-      throw error;
-    } finally {
-      setIsDeleting(null);
-    }
-  };
-
-  useEffect(() => {
-    if (admin?.token) {
-      fetchPackages();
-    }
-  }, [admin?.token]);
+      return {
+        ...updatedPackage,
+        price:
+          typeof updatedPackage.price === "string"
+            ? Number.parseFloat(updatedPackage.price)
+            : updatedPackage.price,
+      };
+    },
+    onSuccess: (updatedPackage) => {
+      // Invalidate atau update cache untuk `tourPackages`
+      queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
+      // Invalidasi atau update cache untuk `tourPackage` detail (jika ada)
+      queryClient.invalidateQueries({
+        queryKey: ["tourPackage", updatedPackage.id],
+      });
+      toast.success("Gambar utama berhasil diperbarui!");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Gagal memperbarui gambar utama.");
+    },
+  });
 
   return {
-    packages,
-    meta,
-    isLoading,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    fetchPackages,
-    createPackage,
-    updatePackage,
-    deletePackage,
+    packages: packages || [], // Pastikan selalu mengembalikan array
+    meta: {
+      // Kembalikan meta data (jika Anda masih ingin menggunakannya untuk pagination di komponen lain)
+      page: 1, // Jika tidak ada pagination di useQuery, set default
+      limit: 10,
+      count: packages?.length || 0,
+    },
+    isLoading: isLoading || isRefetching, // Gabungkan isLoading dan isRefetching
+    isCreating: createPackageMutation.isPending,
+    isUpdating: updatePackageMutation.isPending,
+    isDeleting: deletePackageMutation.isPending
+      ? deletePackageMutation.variables
+      : null, // Mengidentifikasi ID yang sedang dihapus
+    createPackage: createPackageMutation.mutateAsync, // Menggunakan mutateAsync untuk await
+    updatePackage: updatePackageMutation.mutateAsync,
+    deletePackage: deletePackageMutation.mutateAsync,
+    updateMainImage: updateMainImageMutation.mutateAsync, // Export mutasi baru
   };
 }

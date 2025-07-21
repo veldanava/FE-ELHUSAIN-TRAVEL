@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "http", // Pastikan protokolnya sesuai (http atau https)
+        hostname: "localhost",
+        port: "3000", // Port backend Anda
+        pathname: "/**", // Atau lebih umum: /uploads/**
+      },
     ],
   },
   typescript: {

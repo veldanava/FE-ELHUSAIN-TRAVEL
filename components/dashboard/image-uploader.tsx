@@ -1,12 +1,11 @@
+// image-uploader.tsx
 "use client";
 
 import type React from "react";
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Upload, X, ImageIcon, Loader2 } from "lucide-react";
 import { usePackageImages } from "@/hooks/use-package-image";
@@ -20,24 +19,24 @@ interface ImageUploadProps {
   onUploadComplete?: (images: PackageImage[]) => void;
 }
 
+// Hapus 'displayOrder' dari interface ini karena tidak lagi dikelola frontend untuk upload
 interface FileWithPreview extends File {
   preview?: string;
-  displayOrder?: number;
 }
 
 export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0); // Progress tidak diimplementasikan secara aktual di usePackageImages hook
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isUploading, uploadMultipleImages } = usePackageImages();
+  const { isUploading, uploadMultipleImages } = usePackageImages(packageId); // Pass packageId ke hook
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const filesWithPreview = files.map((file, index) => {
+    const filesWithPreview = files.map((file) => {
       const fileWithPreview = file as FileWithPreview;
       fileWithPreview.preview = URL.createObjectURL(file);
-      fileWithPreview.displayOrder = selectedFiles.length + index + 1;
+      // fileWithPreview.displayOrder = selectedFiles.length + index + 1; // BARIS INI DIHAPUS
       return fileWithPreview;
     });
 
@@ -47,32 +46,45 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => {
       const newFiles = prev.filter((_, i) => i !== index);
-      // Update display order
-      return newFiles.map((file, i) => ({
-        ...file,
-        displayOrder: i + 1,
-      }));
+      // Logika update display order di sini tidak lagi diperlukan karena backend yang menanganinya
+      // return newFiles.map((file, i) => ({
+      //   ...file,
+      //   displayOrder: i + 1,
+      // }));
+      return newFiles; // Cukup kembalikan array yang difilter
     });
   };
 
-  const updateDisplayOrder = (index: number, newOrder: number) => {
-    setSelectedFiles((prev) =>
-      prev.map((file, i) =>
-        i === index ? { ...file, displayOrder: newOrder } : file
-      )
-    );
-  };
+  // Fungsi updateDisplayOrder ini sekarang hanya untuk reordering gambar yang sudah ada
+  // dan akan menggunakan `updateImageOrder` dari hook usePackageImages.
+  // Jika ini hanya untuk file yang *belum* diupload, Anda bisa menghapusnya atau mengubah namanya.
+  // Karena backend yang menentukan displayOrder, mengubah order di preview hanya visual.
+  // Jika Anda ingin user bisa mengatur order *sebelum* upload, Anda perlu menyimpan order di state lokal
+  // dan mengirimkannya ke backend (tapi backend harus diubah untuk menerima order dari frontend).
+  // Untuk kasus ini, karena backend mengotomatisasi, fungsi ini bisa dihilangkan atau diadaptasi.
+  // Untuk saat ini, saya akan menghapusnya karena sudah tidak relevan untuk upload gambar baru.
+  // const updateDisplayOrder = (index: number, newOrder: number) => {
+  //   setSelectedFiles((prev) =>
+  //     prev.map((file, i) =>
+  //       i === index ? { ...file, displayOrder: newOrder } : file
+  //     )
+  //   );
+  // };
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
 
     try {
-      // Sort files by display order before upload
-      const sortedFiles = [...selectedFiles].sort(
-        (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)
-      );
+      // Tidak perlu lagi mengurutkan file berdasarkan displayOrder karena backend yang menanganinya
+      // const sortedFiles = [...selectedFiles].sort(
+      //   (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)
+      // );
 
-      const results = await uploadMultipleImages(packageId, sortedFiles);
+      // Cukup kirim file itu sendiri, displayOrder tidak perlu dikirim
+      const results = await uploadMultipleImages({
+        pkgId: packageId,
+        files: selectedFiles,
+      }); // Kirim array File langsung
 
       // Clean up previews
       selectedFiles.forEach((file) => {
@@ -85,6 +97,7 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
       onUploadComplete?.(results);
     } catch (error) {
       console.error("Upload failed:", error);
+      // Error akan ditangani oleh toast di usePackageImages hook
     }
   };
 
@@ -99,10 +112,10 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
     );
 
     if (files.length > 0) {
-      const filesWithPreview = files.map((file, index) => {
+      const filesWithPreview = files.map((file) => {
         const fileWithPreview = file as FileWithPreview;
         fileWithPreview.preview = URL.createObjectURL(file);
-        fileWithPreview.displayOrder = selectedFiles.length + index + 1;
+        // fileWithPreview.displayOrder = selectedFiles.length + index + 1; // BARIS INI DIHAPUS
         return fileWithPreview;
       });
 
@@ -151,7 +164,7 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
                       <Image
                         width={500}
                         height={300}
-                        src={file.preview || "/placeholder.svg"}
+                        src={file.preview} // Langsung gunakan file.preview
                         alt={`Preview ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
@@ -177,7 +190,8 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
                     <p className="text-xs text-muted-foreground truncate">
                       {file.name}
                     </p>
-                    <div className="flex items-center gap-2">
+                    {/* Input display order dihapus karena backend yang mengatur */}
+                    {/* <div className="flex items-center gap-2">
                       <Label htmlFor={`order-${index}`} className="text-xs">
                         Urutan:
                       </Label>
@@ -194,7 +208,7 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
                         }
                         className="h-6 w-16 text-xs"
                       />
-                    </div>
+                    </div> */}
                   </div>
                 </CardContent>
               </Card>
@@ -205,7 +219,7 @@ export function ImageUpload({ packageId, onUploadComplete }: ImageUploadProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Mengupload gambar...</span>
-                <span>{uploadProgress}%</span>
+                <span>{uploadProgress}%</span> {/* Progress ini masih dummy */}
               </div>
               <Progress value={uploadProgress} className="w-full" />
             </div>

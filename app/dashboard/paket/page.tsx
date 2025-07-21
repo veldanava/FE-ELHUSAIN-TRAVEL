@@ -1,6 +1,8 @@
+// components/dashboard/page.tsx
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,7 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Edit, Trash2, ImageIcon, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, ImageIcon, Loader2, X } from "lucide-react"; // Import X untuk tombol hapus gambar
 import {
   usePackages,
   type TourPackage,
@@ -36,6 +38,7 @@ import {
 } from "@/hooks/use-package";
 import { PackageForm } from "@/components/dashboard/package-form";
 import { ImageUpload } from "@/components/dashboard/image-uploader";
+import { usePackageImages } from "@/hooks/use-package-image";
 
 export default function PaketPage() {
   const {
@@ -47,7 +50,12 @@ export default function PaketPage() {
     createPackage,
     updatePackage,
     deletePackage,
+    updateMainImage,
   } = usePackages();
+
+  const IMAGE_BASE_URL =
+    process.env.NEXT_PUBLIC_STORAGE_URL || "http://localhost:3000";
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<TourPackage | null>(
@@ -56,13 +64,22 @@ export default function PaketPage() {
   const [selectedPackageForImages, setSelectedPackageForImages] =
     useState<TourPackage | null>(null);
 
+  // usePackageImages hook secara otomatis akan refetch saat packageId berubah
+  // atau saat invalidateQueries dipanggil dari mutasi di use-package-image.ts
+  const {
+    images: currentPackageImages,
+    isLoading: isImagesLoading,
+    deleteImage,
+    // updateImageOrder, // Jika tidak digunakan, bisa dihapus atau dikomentari
+  } = usePackageImages(selectedPackageForImages?.id);
+
   const handleCreate = async (data: CreatePackageData) => {
     try {
       await createPackage(data);
       setIsDialogOpen(false);
       setEditingPackage(null);
     } catch {
-      // Error handled in hook
+      // Error handled in hook (toast.error)
     }
   };
 
@@ -73,12 +90,15 @@ export default function PaketPage() {
       const updateData: UpdatePackageData = {
         ...data,
         id: editingPackage.id,
+        // mainImageUrl tidak perlu dikirim dari sini karena diupdate via handleSetMainImage
+        // atau jika di form PackageForm Anda masih ada field mainImageUrl, pastikan itu tidak ikut di sini
+        // karena usePackages hook sudah mengharapkan hanya properti yang diubah
       };
       await updatePackage(updateData);
       setIsDialogOpen(false);
       setEditingPackage(null);
     } catch {
-      // Error handled in hook
+      // Error handled in hook (toast.error)
     }
   };
 
@@ -89,12 +109,26 @@ export default function PaketPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Apakah Anda yakin ingin menghapus paket ini?")) return;
-    await deletePackage(id);
+    await deletePackage(id); // Error handled in hook
   };
 
   const handleImageManagement = (pkg: TourPackage) => {
     setSelectedPackageForImages(pkg);
     setIsImageDialogOpen(true);
+  };
+
+  const handleSetMainImage = async (imageUrl: string) => {
+    if (!selectedPackageForImages) return;
+    try {
+      await updateMainImage({
+        packageId: selectedPackageForImages.id,
+        imageUrl: imageUrl,
+      });
+      // Tidak perlu setIsImageDialogOpen(false) di sini kecuali Anda ingin otomatis menutup
+      // dialog setelah set gambar utama. Biasanya dibiarkan terbuka untuk aksi lain.
+    } catch (error) {
+      console.error("Failed to set main image:", error); // console.error di sini lebih baik
+    }
   };
 
   const openCreateDialog = () => {
@@ -210,7 +244,9 @@ export default function PaketPage() {
                   <TableHead>Harga</TableHead>
                   <TableHead>Durasi</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Aksi</TableHead>
+                  <TableHead>Gambar Utama</TableHead>
+                  <TableHead className="w-[150px] text-center">Aksi</TableHead>
+                  {/* Lebarkan kolom Aksi */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -235,11 +271,40 @@ export default function PaketPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      {pkg.mainImageUrl &&
+                      typeof pkg.mainImageUrl === "string" &&
+                      pkg.mainImageUrl.trim() !== "" ? (
+                        <Image
+                          // Ensure pkg.mainImageUrl starts with a '/' before concatenating
+                          src={`${IMAGE_BASE_URL}${
+                            pkg.mainImageUrl.startsWith("/")
+                              ? pkg.mainImageUrl
+                              : `/${pkg.mainImageUrl}`
+                          }`}
+                          alt={pkg.title || "Main Image"}
+                          width={64}
+                          height={64}
+                          className="w-16 h-16 object-cover rounded-md"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "/images/placeholder.jpg";
+                            (e.target as HTMLImageElement).alt =
+                              "Gambar tidak dapat dimuat";
+                          }}
+                        />
+                      ) : (
+                        <div className="text-muted-foreground text-xs text-center w-16">
+                          Belum ada gambar utama
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleEdit(pkg)}
+                          title="Edit Paket" // Tambahkan tooltip
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -248,6 +313,7 @@ export default function PaketPage() {
                           size="sm"
                           onClick={() => handleDelete(pkg.id)}
                           disabled={isDeleting === pkg.id}
+                          title="Hapus Paket" // Tambahkan tooltip
                         >
                           {isDeleting === pkg.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -259,6 +325,7 @@ export default function PaketPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleImageManagement(pkg)}
+                          title="Kelola Gambar" // Tambahkan tooltip
                         >
                           <ImageIcon className="h-4 w-4" />
                         </Button>
@@ -279,17 +346,116 @@ export default function PaketPage() {
             <DialogTitle>Kelola Gambar Paket</DialogTitle>
             <DialogDescription>
               Upload dan atur gambar untuk paket:{" "}
-              {selectedPackageForImages?.title}
+              <span className="font-semibold">
+                {selectedPackageForImages?.title}
+              </span>
             </DialogDescription>
           </DialogHeader>
           {selectedPackageForImages && (
-            <ImageUpload
-              packageId={selectedPackageForImages.id}
-              onUploadComplete={() => {
-                // Optionally refresh package data or show success message
-                setIsImageDialogOpen(false);
-              }}
-            />
+            <div className="space-y-6">
+              <ImageUpload
+                packageId={selectedPackageForImages.id}
+                onUploadComplete={() => {
+                  // onUploadComplete dari ImageUpload sekarang bisa memicu invalidasi
+                  // usePackageImages hook secara otomatis akan refetch
+                  // Tidak perlu melakukan apa-apa di sini jika usePackageImages sudah diatur dengan baik
+                }}
+              />
+
+              {isImagesLoading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {" "}
+                  {/* Grid responsive */}
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold">
+                    Gambar Tersedia ({currentPackageImages.length})
+                  </h3>
+                  {currentPackageImages.length === 0 ? (
+                    <p className="text-muted-foreground">
+                      Belum ada gambar untuk paket ini.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {currentPackageImages.map((img) => (
+                        <Card key={img.id} className="relative group">
+                          <CardContent className="p-2">
+                            <div className="aspect-square relative bg-muted rounded overflow-hidden mb-2">
+                              {/* Pastikan src valid sebelum dirender */}
+                              {img.imageUrl &&
+                              typeof img.imageUrl === "string" &&
+                              img.imageUrl.trim() !== "" ? (
+                                <Image
+                                  src={`${IMAGE_BASE_URL}${img.imageUrl}`} // <-- Perubahan penting di sini! Gabungkan base URL
+                                  alt={`Gambar untuk ${selectedPackageForImages.title}`}
+                                  width={200}
+                                  height={200}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src =
+                                      "/images/placeholder.jpg";
+                                    (e.target as HTMLImageElement).alt =
+                                      "Gambar tidak dapat dimuat";
+                                  }}
+                                />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-xs">
+                                  URL Gambar Invalid
+                                </div>
+                              )}
+
+                              {selectedPackageForImages.mainImageUrl ===
+                                img.imageUrl && (
+                                <Badge className="absolute top-1 left-1 bg-green-500 text-white">
+                                  Utama
+                                </Badge>
+                              )}
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => deleteImage(img.id)}
+                                title="Hapus Gambar Ini"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>Urutan: {img.displayOrder}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => handleSetMainImage(img.imageUrl)}
+                                disabled={
+                                  selectedPackageForImages.mainImageUrl ===
+                                  img.imageUrl
+                                }
+                                title={
+                                  selectedPackageForImages.mainImageUrl ===
+                                  img.imageUrl
+                                    ? "Sudah Gambar Utama"
+                                    : "Atur Sebagai Gambar Utama"
+                                }
+                              >
+                                {selectedPackageForImages.mainImageUrl ===
+                                img.imageUrl
+                                  ? "Gambar Utama"
+                                  : "Atur Sebagai Utama"}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </DialogContent>
       </Dialog>
