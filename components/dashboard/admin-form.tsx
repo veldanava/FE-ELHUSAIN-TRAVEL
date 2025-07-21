@@ -151,12 +151,12 @@ export function AdminUserForm({
             )}
           </Button>
         </div>
-        {!editUser && (
+        {/* {!editUser && (
           <p className="text-xs text-muted-foreground">
             Password minimal 8 karakter, mengandung huruf besar, kecil, angka,
             dan simbol
           </p>
-        )}
+        )} */}
       </div>
 
       <div className="space-y-2">
