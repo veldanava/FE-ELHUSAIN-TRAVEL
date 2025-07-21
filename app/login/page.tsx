@@ -1,6 +1,6 @@
 import { GalleryVerticalEnd } from "lucide-react";
 import { Toaster } from "sonner";
-import { LoginForm } from "@/components/dashboard/login-form";
+import { LoginForm } from "@/components/login/login-form";
 import Image from "next/image";
 
 export default function LoginPage() {
@@ -13,7 +13,7 @@ export default function LoginPage() {
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
                 <GalleryVerticalEnd className="size-4" />
               </div>
-              Acme Inc.
+              Elhusain Travel Admin Login
             </a>
           </div>
           <div className="flex flex-1 items-center justify-center">
