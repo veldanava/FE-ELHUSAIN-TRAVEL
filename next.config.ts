@@ -15,6 +15,12 @@ const nextConfig: NextConfig = {
         port: "3000", // Port backend Anda
         pathname: "/**", // Atau lebih umum: /uploads/**
       },
+      {
+        protocol: "https",
+        hostname: "source.unsplash.com", // Ganti dengan hostname yang sesuai
+        port: "", // Biasanya kosong untuk https
+        pathname: "/**", // Atau sesuai dengan path yang Anda butuhkan
+      },
     ],
   },
   typescript: {

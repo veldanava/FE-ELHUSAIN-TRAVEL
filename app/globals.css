@@ -120,3 +120,134 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Badge styles */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-warning {
+  background-color: #fbbf24;
+  color: #78350f;
+}
+
+.badge-outline {
+  background-color: transparent;
+  border: 1px solid currentColor;
+}
+
+.badge-xs {
+  padding: 0.125rem 0.375rem;
+  font-size: 0.625rem;
+}
+
+/* Steps styles */
+.steps {
+  display: grid;
+  grid-auto-flow: row;
+  gap: 1rem;
+}
+
+.steps-vertical {
+  grid-auto-flow: row;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 2rem;
+}
+
+.step:before {
+  content: "";
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  height: 100%;
+  width: 0.25rem;
+  background-color: #e5e7eb;
+  place-self: center;
+}
+
+.step-warning:before {
+  background-color: #d97706;
+}
+
+/* Hero styles */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  padding: 2rem;
+}
+
+.hero-content {
+  max-width: 80rem;
+  width: 100%;
+  z-index: 1;
+}
+
+/* Footer styles */
+.footer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2rem;
+  padding: 2rem;
+}
+
+.footer-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+}
+
+/* Card styles for compatibility */
+.card {
+  @apply bg-white rounded-lg shadow-sm border;
+}
+
+.card-body {
+  @apply p-6;
+}
+
+.card-title {
+  @apply text-xl font-semibold mb-2;
+}
+
+.card-actions {
+  @apply flex justify-end mt-4;
+}
+
+/* Button styles for compatibility */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-colors;
+}
+
+.btn-warning {
+  @apply bg-amber-800 text-white hover:bg-amber-700;
+}
+
+.btn-block {
+  @apply w-full;
+}
+
+/* Responsive utilities */
+@media (min-width: 768px) {
+  .md\:ml-25 {
+    margin-left: 6.25rem;
+  }
+
+  .md\:mr-25 {
+    margin-right: 6.25rem;
+  }
+}
