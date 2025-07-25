@@ -163,7 +163,7 @@ export function PackageForm({
             onChange={(e) =>
               setFormData({
                 ...formData,
-                price: Number.parseInt(e.target.value) || 0,
+                price: Number.parseInt(e.target.value),
               })
             }
             placeholder="1500000"

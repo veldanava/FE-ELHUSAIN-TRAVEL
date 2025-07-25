@@ -25,7 +25,7 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className="bg-white shadow-sm border-b fixed top-0 left-0 w-full z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -48,7 +48,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="text-gray-700 hover:text-amber-800 px-3 py-2 text-sm font-medium transition-colors"
+                className="text-gray-700 hover:text-amber-800 py-2 text-sm font-medium transition-colors"
               >
                 {item.label}
               </Link>

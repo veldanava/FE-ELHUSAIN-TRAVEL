@@ -21,6 +21,12 @@ const nextConfig: NextConfig = {
         port: "", // Biasanya kosong untuk https
         pathname: "/**", // Atau sesuai dengan path yang Anda butuhkan
       },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
   typescript: {
