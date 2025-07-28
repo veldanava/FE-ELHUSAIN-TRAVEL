@@ -59,9 +59,13 @@ export interface PackagesResponse {
 
 // Tambahkan interface untuk opsi hook
 interface UsePackagesOptions {
-  forAdmin?: boolean; // True jika hook digunakan di halaman admin (membutuhkan token)
-  limit?: number; // Batasan jumlah paket yang diambil
-  isActive?: boolean; // Filter untuk paket yang aktif
+  forAdmin?: boolean;
+  limit?: number;
+  page?: number;
+  isActive?: boolean;
+  search?: string;
+  categoryId?: string | number;
+  sortBy?: string;
 }
 
 // Sesuaikan tanda tangan fungsi usePackages
@@ -73,38 +77,35 @@ export function usePackages(options?: UsePackagesOptions) {
 
   // --- QUERY UNTUK MENGAMBIL DAFTAR PAKET ---
   const {
-    data: packages,
+    data: responseData, // Perubahan: ganti nama 'packages' menjadi 'responseData'
     isLoading,
     error,
     isRefetching,
-  } = useQuery<TourPackage[], Error>({
-    // Tambahkan opsi ke queryKey agar cache terpisah untuk setiap kombinasi opsi
-    queryKey: [
-      "tourPackages",
-      options?.forAdmin,
-      options?.limit,
-      options?.isActive,
-    ],
+  } = useQuery<PackagesResponse, Error>({
+    // Perubahan: Tipe data sekarang PackagesResponse
+    // Perubahan: queryKey sekarang mencakup semua opsi
+    queryKey: ["tourPackages", options],
     queryFn: async () => {
       let headers: HeadersInit = {};
-      // Jika hook dimaksudkan untuk admin DAN token tidak ada, lempar error
       if (options?.forAdmin && !admin?.token) {
         throw new Error("Admin token not available for admin operations.");
       }
-      // Jika token admin ada (baik untuk admin view atau jika token tersedia di public view), tambahkan header
       if (admin?.token) {
         headers = { Authorization: `Bearer ${admin.token}` };
       }
 
-      // Bangun URL dengan parameter query
+      // Perubahan: Bangun URL dengan semua parameter
       const params = new URLSearchParams();
-      if (options?.limit) {
-        params.append("limit", options.limit.toString());
-      }
-      // Tambahkan filter isActive jika dispesifikasikan dan bernilai boolean
+      if (options?.limit) params.append("limit", options.limit.toString());
+      if (options?.page) params.append("page", options.page.toString());
       if (typeof options?.isActive === "boolean") {
         params.append("isActive", options.isActive.toString());
       }
+      if (options?.search) params.append("search", options.search);
+      if (options?.categoryId && options.categoryId !== "all") {
+        params.append("category", options.categoryId.toString());
+      }
+      if (options?.sortBy) params.append("sort", options.sortBy);
 
       const queryString = params.toString();
       const url = `${API_HOST}/tour-packages${
@@ -119,7 +120,8 @@ export function usePackages(options?: UsePackagesOptions) {
       }
       const result: PackagesResponse = await response.json();
 
-      const normalizedPackages = (result.data || []).map((pkg) => ({
+      // Normalisasi harga tetap dilakukan
+      result.data = (result.data || []).map((pkg) => ({
         ...pkg,
         price:
           typeof pkg.price === "string"
@@ -127,23 +129,17 @@ export function usePackages(options?: UsePackagesOptions) {
             : pkg.price,
       }));
 
-      // Filter isActive di frontend jika tidak difilter di backend (atau sebagai fallback)
-      return options?.isActive !== undefined
-        ? normalizedPackages.filter((pkg) => pkg.isActive === options.isActive)
-        : normalizedPackages;
+      return result;
     },
-    // Query hanya akan dijalankan jika:
-    // 1. Bukan untuk admin (true secara default)
-    // 2. Atau jika untuk admin DAN admin.token tersedia
     enabled: options?.forAdmin ? !!admin?.token : true,
     staleTime: 1000 * 60 * 5,
-    placeholderData: [],
-    select: (data) =>
-      data.sort((a, b) =>
-        b.createdAt && a.createdAt
-          ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          : 0
-      ),
+    placeholderData: {
+      // Perubahan: placeholder yang lebih baik
+      message: "",
+      data: [],
+      meta: { page: 1, limit: 10, count: 0 },
+    },
+    // Perubahan: Hapus 'select' untuk sorting, karena sudah dilakukan di backend
   });
 
   // Efek samping untuk menampilkan error dari query
@@ -319,12 +315,8 @@ export function usePackages(options?: UsePackagesOptions) {
   });
 
   return {
-    packages: packages || [],
-    meta: {
-      page: 1,
-      limit: options?.limit || 10, // Sesuaikan limit di meta
-      count: packages?.length || 0,
-    },
+    packages: responseData?.data || [],
+    meta: responseData?.meta,
     isLoading: isLoading || isRefetching,
     isCreating: createPackageMutation.isPending,
     isUpdating: updatePackageMutation.isPending,

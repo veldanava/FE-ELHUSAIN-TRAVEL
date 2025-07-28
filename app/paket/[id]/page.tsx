@@ -56,14 +56,14 @@ export default function PackageDetailPage() {
     }).format(price);
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
+  // const formatDate = (dateString?: string) => {
+  //   if (!dateString) return "N/A";
+  //   return new Date(dateString).toLocaleDateString("id-ID", {
+  //     year: "numeric",
+  //     month: "long",
+  //     day: "numeric",
+  //   });
+  // };
 
   const getImageUrl = (imageUrl: string | null) => {
     if (!imageUrl || imageUrl.trim() === "") {
