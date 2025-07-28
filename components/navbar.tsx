@@ -20,7 +20,7 @@ export default function Navbar() {
     { href: "/", label: "Beranda" },
     { href: "/about", label: "Tentang Elhusain.Travel" },
     { href: "/paket", label: "Paket Elhusain" },
-    { href: "/detail", label: "Galeri & Artikel" },
+    { href: "/artikel", label: "Artikel & Blog" },
     { href: "/visa", label: "Visa" },
   ];
 
