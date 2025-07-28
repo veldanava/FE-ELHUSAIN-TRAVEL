@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Filter } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import PublicLayout from "@/components/public-layout";
 import PaketFilters from "@/components/paket/paket-filters";
 import Pagination from "@/components/paket/pagination";
@@ -115,14 +116,22 @@ export default async function PaketPage({ searchParams }: PaketPageProps) {
                   key={pkg.id}
                   className="overflow-hidden hover:shadow-lg transition-shadow"
                 >
-                  {/* Ganti src / JSX gambar sesuai struktur data Anda */}
-                  <Image
-                    src={getImageUrl(pkg.mainImageUrl)}
-                    alt={pkg.title}
-                    width={400}
-                    height={300}
-                    className="aspect-video w-full object-cover"
-                  />
+                  <Link
+                    href={`/paket/${pkg.id}`}
+                    className="block aspect-video relative bg-gray-200"
+                  >
+                    <Image
+                      src={getImageUrl(pkg.mainImageUrl)}
+                      alt={pkg.title}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-amber-800 text-white">
+                        {pkg.category?.name || ""}
+                      </Badge>
+                    </div>
+                  </Link>
                   <CardContent className="p-6">
                     <h3 className="text-xl font-semibold text-gray-900 mb-2 line-clamp-2">
                       {pkg.title}
