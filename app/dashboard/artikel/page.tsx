@@ -430,7 +430,7 @@ export default function PostsPage() {
                         {post.status === "PUBLISHED" && (
                           <Button variant="outline" size="sm" asChild>
                             <a
-                              href={`/posts/${post.slug}`}
+                              href={`/artikel/${post.slug}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
