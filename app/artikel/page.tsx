@@ -211,7 +211,7 @@ export default function PostsPage() {
                       </div>
                     </div>
 
-                    <Link href={`/posts/${post.slug}`}>
+                    <Link href={`/artikel/${post.slug}`}>
                       <Button className="w-full bg-amber-800 hover:bg-amber-700">
                         Baca Selengkapnya
                       </Button>
