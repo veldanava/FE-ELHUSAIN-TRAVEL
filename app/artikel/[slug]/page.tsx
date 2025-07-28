@@ -20,6 +20,9 @@ export default function PostDetailPage() {
   const slug = params.slug as string;
   const [isLiked, setIsLiked] = useState(false);
 
+  const IMAGE_BASE_URL =
+    process.env.NEXT_PUBLIC_STORAGE_URL || "http://localhost:3000";
+
   // Menggunakan custom hook untuk fetch post by slug
   const { data: post, isLoading, error, isError } = usePostBySlug(slug);
 
@@ -160,7 +163,10 @@ export default function PostDetailPage() {
             {post.imageUrls && post.imageUrls.length > 0 && (
               <div className="aspect-video relative bg-gray-200 rounded-lg overflow-hidden mb-8">
                 <Image
-                  src={post.imageUrls[0] || "/placeholder.svg"}
+                  src={
+                    `${IMAGE_BASE_URL}${post.imageUrls[0]}` ||
+                    "/placeholder.svg"
+                  }
                   alt={post.title}
                   fill
                   className="object-cover"

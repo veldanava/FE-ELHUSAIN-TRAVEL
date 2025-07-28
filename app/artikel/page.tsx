@@ -24,6 +24,8 @@ export default function PostsPage() {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
 
+  const IMAGE_BASE_URL = process.env.NEXT_PUBLIC_STORAGE_URL || "";
+
   const { posts, isLoading } = usePosts({ status: "PUBLISHED" });
 
   const formatDate = (dateString: string) => {
@@ -174,8 +176,8 @@ export default function PostsPage() {
                   <div className="aspect-video relative bg-gray-200">
                     <Image
                       src={
-                        post.imageUrls?.[0] ||
-                        "/placeholder.svg?height=300&width=400"
+                        `${IMAGE_BASE_URL}${post.imageUrls[0]}` ||
+                        "/placeholder.svg"
                       }
                       alt={post.title}
                       fill
