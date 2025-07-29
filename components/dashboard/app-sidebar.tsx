@@ -35,7 +35,7 @@ const menuItems = [
     icon: Home,
   },
   {
-    title: "Paket Wisata",
+    title: "Paket Travel",
     url: "/dashboard/paket",
     icon: Package,
   },
