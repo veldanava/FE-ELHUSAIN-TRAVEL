@@ -7,7 +7,6 @@ import Catalogue from "@/components/catalogue";
 import Our from "@/components/our";
 import Program from "@/components/program";
 import Testimonials from "@/components/testimonials";
-import Photo from "@/components/photo";
 import Article from "@/components/article";
 import Footer from "@/components/footer";
 
@@ -27,7 +26,7 @@ export default function Home() {
       <Our />
       <Program />
       <Testimonials />
-      <Photo />
+      {/* <Photo /> */}
       <Article />
       <Footer />
     </div>

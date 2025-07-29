@@ -1,6 +1,7 @@
-"use client";
+// app/dashboard/posts/page.tsx
 
-import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,14 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -26,199 +19,229 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Plus,
   Edit,
-  Trash2,
-  Loader2,
-  RefreshCw,
-  Search,
   Eye,
   ImageIcon,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import {
-  usePosts,
-  type Post,
-  type CreatePostData,
-  type UpdatePostData,
-} from "@/hooks/use-article";
-import { PostForm } from "@/components/post-form";
-import Image from "next/image";
+import PostsFilters from "@/components/dashboard/posts-filters";
+import PostsActions from "@/components/dashboard/posts-actions";
+import DeletePostButton from "@/components/dashboard/delete-post-button";
 
-export default function PostsPage() {
-  const [filters, setFilters] = useState({
-    type: "",
-    status: "",
+const IMAGE_BASE_URL =
+  process.env.NEXT_PUBLIC_STORAGE_URL || "http://localhost:3000";
+const API_HOST = process.env.API_HOST || "http://localhost:3000/api";
+
+// ----- Types -----
+interface Post {
+  id: number;
+  title: string;
+  slug: string;
+  body: string;
+  type: string;
+  status: string;
+  createdAt: string;
+  imageUrls: string[];
+}
+
+interface PostsPageProps {
+  searchParams?: {
+    search?: string;
+    type?: string;
+    status?: string;
+    sort?: string;
+    page?: string;
+    limit?: string;
+  };
+}
+
+// ----- Helper Functions -----
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString("id-ID", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
+};
 
-  const IMAGE_BASE_URL =
-    process.env.NEXT_PUBLIC_STORAGE_URL || "http://localhost:3000";
-
-  const {
-    posts,
-    isLoading,
-    isCreating,
-    isUpdating,
-    isDeleting,
-    // fetchPosts, // Removed because fetchPosts does not exist
-    createPost,
-    updatePost,
-    deletePost,
-  } = usePosts(filters) as unknown as {
-    posts: Post[];
-    isLoading: boolean;
-    isCreating: boolean;
-    isUpdating: boolean;
-    isDeleting: number | null;
-    createPost: (data: CreatePostData) => Promise<void>;
-    updatePost: (id: number, data: UpdatePostData) => Promise<void>;
-    deletePost: (id: number) => Promise<void>;
-  };
-
-  const handleCreate = async (data: CreatePostData | UpdatePostData) => {
-    // Ensure required fields for CreatePostData are present
-    if (!data.title) {
-      // Optionally show an error or return early
-      return;
-    }
-    try {
-      await createPost(data as CreatePostData);
-      setIsDialogOpen(false);
-      setEditingPost(null);
-    } catch {
-      // Error handled in hook or intentionally ignored
-    }
-  };
-
-  const handleUpdate = async (data: UpdatePostData) => {
-    if (!editingPost) return;
-
-    try {
-      await updatePost(editingPost.id, data);
-      setIsDialogOpen(false);
-      setEditingPost(null);
-    } catch {
-      // Error handled in hook
-    }
-  };
-
-  const handleEdit = (post: Post) => {
-    setEditingPost(post);
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus post ini?")) return;
-    await deletePost(id);
-  };
-
-  const openCreateDialog = () => {
-    setEditingPost(null);
-    setIsDialogOpen(true);
-  };
-
-  const handleRefresh = () => {
-    // If your hook supports refetching, call it here. Otherwise, update filters to trigger reload.
-    setFilters({ ...filters });
-  };
-
-  const handleFilterChange = (key: string, value: string) => {
-    const newFilters = { ...filters, [key]: value === "all" ? "" : value };
-    setFilters(newFilters);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "PUBLISHED":
-        return "default" as const;
-      case "DRAFT":
-        return "secondary" as const;
-      default:
-        return "outline" as const;
-    }
-  };
-
-  const getTypeBadgeVariant = (type: string) => {
-    switch (type) {
-      case "BLOG":
-        return "default" as const;
-      case "NEWS":
-        return "destructive" as const;
-      case "CATALOG":
-        return "secondary" as const;
-      default:
-        return "outline" as const;
-    }
-  };
-
-  // Filter posts by search term
-  const filteredPosts = posts.filter(
-    (post) =>
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.body.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-4 w-32" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-12" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-3 w-2/3" />
-                  </div>
-                  <div className="flex space-x-2">
-                    <Skeleton className="h-8 w-8" />
-                    <Skeleton className="h-8 w-8" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+const getStatusBadgeVariant = (status: string) => {
+  switch (status) {
+    case "PUBLISHED":
+      return "default" as const;
+    case "DRAFT":
+      return "secondary" as const;
+    default:
+      return "outline" as const;
   }
+};
+
+const getTypeBadgeVariant = (type: string) => {
+  switch (type) {
+    case "BLOG":
+      return "default" as const;
+    case "NEWS":
+      return "destructive" as const;
+    case "CATALOG":
+      return "secondary" as const;
+    default:
+      return "outline" as const;
+  }
+};
+
+const getImageUrl = (imageUrl: string | null) => {
+  if (!imageUrl || imageUrl.trim() === "") {
+    return "/images/placeholder.jpg";
+  }
+  return `${IMAGE_BASE_URL}${
+    imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
+  }`;
+};
+
+// ----- Pagination Component -----
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  searchParams: Record<string, string | string[] | undefined>;
+}
+
+function PostsPagination({
+  currentPage,
+  totalPages,
+  searchParams,
+}: PaginationProps) {
+  if (totalPages <= 1) return null;
+
+  const createPageUrl = (page: number) => {
+    // Convert searchParams to string format
+    const plainParams: Record<string, string> = {};
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (value !== undefined) {
+        plainParams[key] = Array.isArray(value) ? value[0] || "" : value;
+      }
+    });
+
+    const params = new URLSearchParams(plainParams);
+    params.set("page", page.toString());
+    return `?${params.toString()}`;
+  };
+
+  const getVisiblePages = () => {
+    const pages = [];
+    const showPages = 5;
+
+    if (totalPages <= showPages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else if (currentPage <= 3) {
+      for (let i = 1; i <= showPages; i++) {
+        pages.push(i);
+      }
+    } else if (currentPage >= totalPages - 2) {
+      for (let i = totalPages - showPages + 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+        pages.push(i);
+      }
+    }
+
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between mt-6">
+      <div className="text-sm text-muted-foreground">
+        Halaman {currentPage} dari {totalPages}
+      </div>
+      <div className="flex items-center gap-2">
+        <Link href={createPageUrl(Math.max(1, currentPage - 1))}>
+          <Button variant="outline" size="sm" disabled={currentPage === 1}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Sebelumnya
+          </Button>
+        </Link>
+
+        <div className="flex items-center gap-1">
+          {getVisiblePages().map((pageNumber) => (
+            <Link key={pageNumber} href={createPageUrl(pageNumber)}>
+              <Button
+                variant={currentPage === pageNumber ? "default" : "outline"}
+                size="sm"
+                className="w-8 h-8 p-0"
+              >
+                {pageNumber}
+              </Button>
+            </Link>
+          ))}
+        </div>
+
+        <Link href={createPageUrl(Math.min(totalPages, currentPage + 1))}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages}
+          >
+            Selanjutnya
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ----- Main Component -----
+export default async function PostsPage({ searchParams }: PostsPageProps) {
+  const search = searchParams?.search || "";
+  const type = searchParams?.type || "all";
+  const status = searchParams?.status || "all";
+  const sortBy = searchParams?.sort || "newest";
+  const currentPage = Number(searchParams?.page) || 1;
+  const limit = Number(searchParams?.limit) || 10;
+
+  // Build URL parameters for API call
+  const params = new URLSearchParams({
+    page: currentPage.toString(),
+    limit: limit.toString(),
+    sort: sortBy,
+  });
+
+  if (search) params.set("search", search);
+  if (type && type !== "all") params.set("type", type);
+  if (status && status !== "all") params.set("status", status);
+
+  let posts: Post[] = [];
+  let meta = { totalCount: 0, totalPages: 0 };
+
+  try {
+    const response = await fetch(`${API_HOST}/posts?${params.toString()}`, {
+      cache: "no-store", // Always get fresh data for admin
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      posts = data.posts || [];
+      meta = data.meta || { totalCount: 0, totalPages: 0 };
+    }
+  } catch (error) {
+    console.error("Failed to fetch posts:", error);
+    // Continue with empty data - will show empty state
+  }
+
+  // Calculate pagination info
+  const startItem = (currentPage - 1) * limit + 1;
+  const endItem = Math.min(currentPage * limit, meta.totalCount);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Posts</h1>
@@ -226,224 +249,211 @@ export default function PostsPage() {
             Kelola blog, artikel, dan konten lainnya
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreateDialog}>
-                <Plus className="mr-2 h-4 w-4" />
-                Tambah Post
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingPost ? "Edit Post" : "Tambah Post"}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingPost ? "Update informasi post" : "Buat post baru"}
-                </DialogDescription>
-              </DialogHeader>
-              <PostForm
-                post={editingPost}
-                onSubmit={editingPost ? handleUpdate : handleCreate}
-                onCancel={() => setIsDialogOpen(false)}
-                isLoading={isCreating || isUpdating}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
+        <PostsActions />
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Cari posts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            <Select
-              value={filters.type || "all"}
-              onValueChange={(value) => handleFilterChange("type", value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Semua Tipe" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Tipe</SelectItem>
-                <SelectItem value="BLOG">Blog</SelectItem>
-                <SelectItem value="NEWS">News</SelectItem>
-                <SelectItem value="CATALOG">Catalog</SelectItem>
-                <SelectItem value="INFORMATION">Information</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filters.status || "all"}
-              onValueChange={(value) => handleFilterChange("status", value)}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Semua Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="PUBLISHED">Published</SelectItem>
-                <SelectItem value="DRAFT">Draft</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <div className="flex items-center justify-center md:justify-start">
-              <span className="text-sm text-gray-600">
-                {filteredPosts.length} posts ditemukan
-              </span>
-            </div>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filter & Pencarian
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PostsFilters
+            totalResults={meta.totalCount}
+            currentFilters={{
+              search,
+              type,
+              status,
+              sort: sortBy,
+              limit: limit.toString(),
+            }}
+          />
         </CardContent>
       </Card>
 
+      {/* Posts Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Daftar Posts</CardTitle>
-          <CardDescription>Total {filteredPosts.length} posts</CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Daftar Posts</CardTitle>
+              <CardDescription>
+                {meta.totalCount > 0 ? (
+                  <>
+                    Menampilkan {startItem} - {endItem} dari {meta.totalCount}{" "}
+                    posts
+                    {search && ` untuk "${search}"`}
+                    {type !== "all" && ` dengan tipe "${type}"`}
+                    {status !== "all" && ` dengan status "${status}"`}
+                  </>
+                ) : (
+                  "Tidak ada posts ditemukan"
+                )}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {filteredPosts.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Belum ada posts</p>
-              <Button className="mt-4" onClick={openCreateDialog}>
-                <Plus className="mr-2 h-4 w-4" />
-                Tambah Post Pertama
-              </Button>
+          {posts.length === 0 ? (
+            <div className="text-center py-12">
+              <Filter className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {meta.totalCount === 0 &&
+                !search &&
+                type === "all" &&
+                status === "all"
+                  ? "Belum ada posts"
+                  : "Tidak ada posts ditemukan"}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {meta.totalCount === 0 &&
+                !search &&
+                type === "all" &&
+                status === "all"
+                  ? "Mulai dengan menambahkan post pertama Anda"
+                  : "Coba ubah filter pencarian Anda atau reset filter"}
+              </p>
+              {meta.totalCount === 0 &&
+              !search &&
+              type === "all" &&
+              status === "all" ? (
+                <PostsActions />
+              ) : (
+                <Link href="/dashboard/posts">
+                  <Button variant="outline">Reset Filter</Button>
+                </Link>
+              )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Judul</TableHead>
-                  <TableHead>Tipe</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Gambar</TableHead>
-                  <TableHead>Dibuat</TableHead>
-                  <TableHead>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPosts.map((post) => (
-                  <TableRow key={post.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{post.title}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {post.body.length > 100
-                            ? `${post.body.substring(0, 100)}...`
-                            : post.body}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Slug: {post.slug}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getTypeBadgeVariant(post.type)}>
-                        {post.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(post.status)}>
-                        {post.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          {post.imageUrls?.length || 0}
-                        </span>
-                        {post.imageUrls && post.imageUrls.length > 0 && (
-                          <div className="flex -space-x-1 ml-2">
-                            {post.imageUrls.slice(0, 3).map((url, index) => (
-                              <div
-                                key={index}
-                                className="w-6 h-6 rounded border-2 border-white overflow-hidden"
-                              >
-                                <Image
-                                  src={
-                                    `${IMAGE_BASE_URL}${url}` ||
-                                    "/placeholder.svg"
-                                  }
-                                  alt={`Image ${index + 1}`}
-                                  width={24}
-                                  height={24}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ))}
-                            {post.imageUrls.length > 3 && (
-                              <div className="w-6 h-6 rounded border-2 border-white bg-gray-100 flex items-center justify-center">
-                                <span className="text-xs text-gray-600">
-                                  +{post.imageUrls.length - 3}
-                                </span>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Judul</TableHead>
+                      <TableHead>Tipe</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Gambar</TableHead>
+                      <TableHead>Dibuat</TableHead>
+                      <TableHead className="w-[150px] text-center">
+                        Aksi
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {posts.map((post) => (
+                      <TableRow key={post.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{post.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {post.body.length > 100
+                                ? `${post.body.substring(0, 100)}...`
+                                : post.body}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Slug: {post.slug}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getTypeBadgeVariant(post.type)}>
+                            {post.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(post.status)}>
+                            {post.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {post.imageUrls?.length || 0}
+                            </span>
+                            {post.imageUrls && post.imageUrls.length > 0 && (
+                              <div className="flex -space-x-1 ml-2">
+                                {post.imageUrls
+                                  .slice(0, 3)
+                                  .map((url, index) => (
+                                    <div
+                                      key={index}
+                                      className="w-6 h-6 rounded border-2 border-white overflow-hidden"
+                                    >
+                                      <Image
+                                        src={getImageUrl(url)}
+                                        alt={`Image ${index + 1}`}
+                                        width={24}
+                                        height={24}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ))}
+                                {post.imageUrls.length > 3 && (
+                                  <div className="w-6 h-6 rounded border-2 border-white bg-gray-100 flex items-center justify-center">
+                                    <span className="text-xs text-gray-600">
+                                      +{post.imageUrls.length - 3}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(post.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(post)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(post.id)}
-                          disabled={isDeleting === post.id}
-                        >
-                          {isDeleting === post.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
-                        {post.status === "PUBLISHED" && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a
-                              href={`/artikel/${post.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(post.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              title="Edit Post"
                             >
-                              <Eye className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                              <Link href={`/dashboard/posts/edit/${post.id}`}>
+                                <Edit className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <DeletePostButton
+                              postId={post.id}
+                              postTitle={post.title}
+                            />
+                            {post.status === "PUBLISHED" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                asChild
+                                title="Lihat Post"
+                              >
+                                <Link
+                                  href={`/artikel/${post.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              <PostsPagination
+                currentPage={currentPage}
+                totalPages={meta.totalPages}
+                searchParams={searchParams || {}}
+              />
+            </>
           )}
         </CardContent>
       </Card>

@@ -21,7 +21,7 @@ export default function Navbar() {
     { href: "/about", label: "Tentang Elhusain.Travel" },
     { href: "/paket", label: "Paket Elhusain" },
     { href: "/artikel", label: "Artikel & Blog" },
-    { href: "/visa", label: "Visa" },
+    // { href: "/visa", label: "Visa" },
   ];
 
   return (
