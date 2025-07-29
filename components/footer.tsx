@@ -32,11 +32,11 @@ export default function Footer() {
             <Link href="/paket">Paket Elhusain</Link>
           </li>
           <li className="pb-2">
-            <Link href="/detail">Galeri & Artikel</Link>
+            <Link href="/detail">Artikel & Blog</Link>
           </li>
-          <li className="pb-2">
+          {/* <li className="pb-2">
             <Link href="/visa">Visa</Link>
-          </li>
+          </li> */}
         </ul>
       </nav>
       <nav>

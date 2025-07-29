@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePosts } from "@/hooks/use-article"; // import hook
 
 interface Article {
   id: number;
@@ -14,58 +14,8 @@ interface Article {
 }
 
 export default function Article() {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchArticles() {
-      try {
-        // Replace with your actual API endpoint
-        const response = await fetch("/api/articles?limit=3");
-        if (!response.ok) {
-          throw new Error("Failed to fetch articles");
-        }
-        const data = await response.json();
-        setArticles(Array.isArray(data.data) ? data.data : []);
-      } catch (error) {
-        console.error("Error fetching articles:", error);
-        // Fallback articles if API fails
-        setArticles([
-          {
-            id: 1,
-            title: "Persiapan Sebelum Berangkat Umroh",
-            excerpt:
-              "Panduan lengkap persiapan fisik, mental, dan perlengkapan sebelum berangkat umroh",
-            imageUrl: "/placeholder.svg?height=200&width=300",
-            date: "2023-05-15",
-            author: "Ustadz Ahmad",
-          },
-          {
-            id: 2,
-            title: "Tata Cara Umroh yang Benar",
-            excerpt:
-              "Penjelasan detail tentang rukun dan tata cara umroh sesuai sunnah",
-            imageUrl: "/placeholder.svg?height=200&width=300",
-            date: "2023-06-20",
-            author: "Ustadz Mahmud",
-          },
-          {
-            id: 3,
-            title: "Ziarah di Madinah",
-            excerpt:
-              "Tempat-tempat bersejarah yang direkomendasikan untuk diziarahi di Madinah",
-            imageUrl: "/placeholder.svg?height=200&width=300",
-            date: "2023-07-10",
-            author: "Ustadzah Fatimah",
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchArticles();
-  }, []);
+  // Use custom hook to fetch posts (limit 3)
+  const { posts, isLoading } = usePosts({ limit: 3 });
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -79,16 +29,12 @@ export default function Article() {
     <div className="w-full py-8 bg-white">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-start mb-8">
-          <div>
-            <h1 className="text-[20px] font-bold md:ml-20">Artikel</h1>
-          </div>
-          <div>
-            <Link href="/detail">
-              <button className="btn btn-warning text-white hidden flex-none lg:block md:mr-20">
-                Lihat Semua
-              </button>
-            </Link>
-          </div>
+          <h1 className="text-[20px] font-bold md:ml-20">Artikel</h1>
+          <Link href="/artikel">
+            <button className="btn btn-warning text-white hidden flex-none lg:block md:mr-20">
+              Lihat Semua
+            </button>
+          </Link>
         </div>
         <div className="flex justify-center items-center flex-col gap-3 p-4 lg:flex-row lg:items-stretch lg:flex-wrap">
           {isLoading
@@ -107,14 +53,14 @@ export default function Article() {
                   </div>
                 </div>
               ))
-            : articles.map((article) => (
+            : posts.map((article: any) => (
                 <div
                   key={article.id}
                   className="card w-96 bg-base-100 shadow-sm"
                 >
                   <figure>
                     <Image
-                      src={article.imageUrl || "/placeholder.svg"}
+                      src={article.imageUrls?.[0] || "/placeholder.svg"}
                       alt={article.title}
                       width={300}
                       height={200}
@@ -125,20 +71,18 @@ export default function Article() {
                     <span className="badge badge-xs badge-warning">
                       Artikel
                     </span>
-                    <div className="flex justify-between">
-                      <h2 className="text-xl font-bold">{article.title}</h2>
-                    </div>
-                    <p className="text-sm text-gray-600">{article.excerpt}</p>
+                    <h2 className="text-xl font-bold mt-2">{article.title}</h2>
+                    <p className="text-sm text-gray-600 mt-1">{article.body}</p>
                     <div className="flex justify-between items-center mt-2">
                       <span className="text-xs text-gray-500">
-                        {formatDate(article.date)}
+                        {formatDate(article.createdAt)}
                       </span>
                       <span className="text-xs text-gray-500">
-                        Oleh: {article.author}
+                        Oleh: {article.adminId}
                       </span>
                     </div>
                     <div className="mt-4">
-                      <Link href={`/detail/${article.id}`}>
+                      <Link href={`/artikel/${article.id}`}>
                         <button className="btn btn-warning btn-block text-white">
                           Baca Selengkapnya
                         </button>
