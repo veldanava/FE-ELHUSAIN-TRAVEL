@@ -1,5 +1,4 @@
 // components/dashboard/page.tsx
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +28,7 @@ import { TourPackage } from "@/hooks/use-package";
 import DashboardFilters from "@/components/dashboard/dashboard-filters";
 import DashboardActions from "@/components/dashboard/dashboard-actions";
 import DeletePackageButton from "@/components/dashboard/delete-package-button";
+import ImageWithFallback from "@/components/dashboard/image-with-fallback";
 
 const IMAGE_BASE_URL =
   process.env.NEXT_PUBLIC_STORAGE_URL || "http://localhost:3000";
@@ -433,16 +433,13 @@ export default async function PaketPage({ searchParams }: DashboardPageProps) {
                           typeof pkg.mainImageUrl === "string" &&
                           pkg.mainImageUrl.trim() !== "" ? (
                             <div className="relative w-16 h-16">
-                              <Image
+                              <ImageWithFallback
                                 src={getImageUrl(pkg.mainImageUrl)}
+                                fallbackSrc="/images/placeholder.jpg"
                                 alt={pkg.title || "Main Image"}
                                 fill
                                 className="object-cover rounded-md"
                                 sizes="64px"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src =
-                                    "/images/placeholder.jpg";
-                                }}
                               />
                             </div>
                           ) : (

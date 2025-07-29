@@ -1,7 +1,7 @@
 // app/dashboard/paket/edit/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,7 @@ import {
 } from "@/hooks/use-package";
 
 interface EditPackagePageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default function EditPackagePage({ params }: EditPackagePageProps) {
@@ -33,7 +31,8 @@ export default function EditPackagePage({ params }: EditPackagePageProps) {
   const [packageData, setPackageData] = useState<TourPackage | null>(null);
   const [notFound, setNotFound] = useState(false);
 
-  const packageId = parseInt(params.id);
+  const { id } = React.use(params);
+  const packageId = parseInt(id, 10);
 
   useEffect(() => {
     if (!isLoading && packages.length > 0) {

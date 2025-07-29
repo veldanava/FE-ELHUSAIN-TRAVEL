@@ -1,7 +1,7 @@
 // app/dashboard/paket/images/[id]/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,7 @@ import { usePackageImages } from "@/hooks/use-package-image";
 import { usePackages, type TourPackage } from "@/hooks/use-package";
 
 interface ImageManagementPageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default function ImageManagementPage({
@@ -36,7 +34,8 @@ export default function ImageManagementPage({
   const [packageData, setPackageData] = useState<TourPackage | null>(null);
   const [notFound, setNotFound] = useState(false);
 
-  const packageId = parseInt(params.id);
+  const { id } = React.use(params);
+  const packageId = parseInt(id, 10);
 
   const {
     images: currentPackageImages,
