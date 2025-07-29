@@ -36,13 +36,13 @@ export default function Article() {
             </button>
           </Link>
         </div>
-        <div className="flex justify-center items-center flex-col gap-3 p-4 lg:flex-row lg:items-stretch lg:flex-wrap">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:px-20">
           {isLoading
             ? // Loading skeleton
               Array.from({ length: 3 }).map((_, index) => (
                 <div
                   key={index}
-                  className="card w-96 bg-base-100 shadow-sm animate-pulse"
+                  className="card bg-base-100 shadow-xl flex flex-col h-full animate-pulse"
                 >
                   <div className="h-40 bg-gray-200 rounded-t"></div>
                   <div className="card-body">
@@ -56,7 +56,7 @@ export default function Article() {
             : posts.map((article: any) => (
                 <div
                   key={article.id}
-                  className="card w-96 bg-base-100 shadow-sm"
+                  className="card bg-base-100 shadow-xl flex flex-col h-full"
                 >
                   <figure>
                     <Image
@@ -77,9 +77,9 @@ export default function Article() {
                       <span className="text-xs text-gray-500">
                         {formatDate(article.createdAt)}
                       </span>
-                      <span className="text-xs text-gray-500">
-                        Oleh: {article.adminId}
-                      </span>
+                      {/* <span className="text-xs text-gray-500">
+                        Oleh: {article.author || "Admin"}
+                      </span> */}
                     </div>
                     <div className="mt-4">
                       <Link href={`/artikel/${article.id}`}>
