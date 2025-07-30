@@ -26,7 +26,7 @@ export default function PostsActions() {
       </Button>
 
       <Button asChild>
-        <Link href="/dashboard/posts/create">
+        <Link href="/dashboard/artikel/create">
           <Plus className="mr-2 h-4 w-4" />
           Tambah Post
         </Link>

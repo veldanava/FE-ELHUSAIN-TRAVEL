@@ -322,7 +322,7 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
               status === "all" ? (
                 <PostsActions />
               ) : (
-                <Link href="/dashboard/posts">
+                <Link href="/dashboard/artikel">
                   <Button variant="outline">Reset Filter</Button>
                 </Link>
               )}
@@ -415,7 +415,7 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
                               asChild
                               title="Edit Post"
                             >
-                              <Link href={`/dashboard/posts/edit/${post.id}`}>
+                              <Link href={`/dashboard/artikel/edit/${post.id}`}>
                                 <Edit className="h-4 w-4" />
                               </Link>
                             </Button>

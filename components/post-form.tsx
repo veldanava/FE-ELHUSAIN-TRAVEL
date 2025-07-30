@@ -55,6 +55,9 @@ export function PostForm({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const IMAGE_PREVIEW =
+    process.env.NEXT_PUBLIC_STORAGE_URL || "http://localhost:3000";
+
   useEffect(() => {
     if (editPost) {
       setFormData({
@@ -251,7 +254,14 @@ export function PostForm({
                 <CardContent className="p-2">
                   <div className="aspect-video relative bg-gray-200 rounded overflow-hidden">
                     <Image
-                      src={preview || "/placeholder.svg"}
+                      src={
+                        // Jika preview sudah absolute (http://…) atau blob:, pakai langsung
+                        preview.startsWith("http") ||
+                        preview.startsWith("blob:")
+                          ? preview
+                          : // Kalau relatif, tambahkan host
+                            `${IMAGE_PREVIEW}${preview}`
+                      }
                       alt={`Preview ${index + 1}`}
                       className="w-full h-full object-cover"
                       width={400}
