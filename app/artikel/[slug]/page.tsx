@@ -262,7 +262,7 @@ export default function PostDetailPage() {
                           {relatedPost.type}
                         </Badge>
                       </div>
-                      <Link href={`/posts/${relatedPost.slug}`}>
+                      <Link href={`/artikel/${relatedPost.slug}`}>
                         <Button className="w-full bg-amber-800 hover:bg-amber-700">
                           Baca Artikel
                         </Button>
