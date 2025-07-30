@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, X } from "lucide-react";
 import { useCategories } from "@/hooks/use-categories";
 import type { TourPackage, CreatePackageData } from "@/hooks/use-package"; // Pastikan TourPackage dan CreatePackageData sudah diimpor dengan benar
 
@@ -45,7 +45,10 @@ export function PackageForm({
     mainImageUrl: "", // Nilai awal kosong atau string kosong
     categoryId: 0,
     isActive: true,
+    features: [],
   });
+
+  const [currentFeature, setCurrentFeature] = useState("");
 
   useEffect(() => {
     if (editPackage) {
@@ -59,6 +62,7 @@ export function PackageForm({
         mainImageUrl: editPackage.mainImageUrl || "", // Pastikan selalu string
         categoryId: editPackage.categoryId,
         isActive: editPackage.isActive,
+        features: editPackage.features || [],
       });
     } else {
       setFormData({
@@ -71,6 +75,7 @@ export function PackageForm({
         mainImageUrl: "",
         categoryId: 0,
         isActive: true,
+        features: [],
       });
     }
   }, [editPackage]);
@@ -95,6 +100,33 @@ export function PackageForm({
       title,
       slug: !editPackage ? generateSlug(title) : prev.slug, // Hanya generate slug jika membuat paket baru
     }));
+  };
+
+  const addFeature = () => {
+    if (
+      currentFeature.trim() &&
+      !formData.features?.includes(currentFeature.trim())
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        features: [...(prev.features || []), currentFeature.trim()],
+      }));
+      setCurrentFeature("");
+    }
+  };
+
+  const removeFeature = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      features: prev.features?.filter((_, i) => i !== index) || [],
+    }));
+  };
+
+  const handleFeatureKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addFeature();
+    }
   };
 
   return (
@@ -185,6 +217,57 @@ export function PackageForm({
             disabled={isLoading}
           />
         </div>
+      </div>
+
+      {/* Section untuk Features */}
+      <div className="space-y-2">
+        <Label>Fitur Paket</Label>
+        <div className="flex gap-2">
+          <Input
+            value={currentFeature}
+            onChange={(e) => setCurrentFeature(e.target.value)}
+            onKeyDown={handleFeatureKeyPress}
+            placeholder="Masukkan fitur paket (misal: Hotel bintang 4)"
+            disabled={isLoading}
+          />
+          <Button
+            type="button"
+            onClick={addFeature}
+            disabled={isLoading || !currentFeature.trim()}
+            size="sm"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Daftar features yang sudah ditambahkan */}
+        {formData.features && formData.features.length > 0 && (
+          <div className="space-y-2">
+            <div className="text-sm text-muted-foreground">
+              Fitur yang ditambahkan:
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formData.features.map((feature, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-1 bg-secondary px-2 py-1 rounded-md text-sm"
+                >
+                  <span>{feature}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFeature(index)}
+                    disabled={isLoading}
+                    className="h-auto p-0 w-4 hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Input mainImageUrl dihapus dari sini */}

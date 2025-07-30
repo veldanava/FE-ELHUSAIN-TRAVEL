@@ -23,8 +23,8 @@ export default function DashboardActions() {
     try {
       await createPackage(data);
       setIsDialogOpen(false);
-      // Refresh the page to show new data
-      window.location.reload();
+      // Tidak perlu reload halaman karena React Query akan otomatis update cache
+      // window.location.reload(); <- Hapus ini
     } catch {
       // Error handled in hook (toast.error)
     }

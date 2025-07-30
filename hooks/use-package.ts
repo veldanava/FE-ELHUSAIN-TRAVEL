@@ -25,6 +25,7 @@ export interface TourPackage {
   mainImageUrl: string | null;
   categoryId: number;
   isActive: boolean;
+  features: string[];
   createdAt?: string;
   updatedAt?: string;
   category?: Category;
@@ -41,6 +42,7 @@ export interface CreatePackageData {
   mainImageUrl: string;
   categoryId: number;
   isActive: boolean;
+  features?: string[];
 }
 
 export interface UpdatePackageData extends Partial<CreatePackageData> {
@@ -57,7 +59,6 @@ export interface PackagesResponse {
   data: TourPackage[];
 }
 
-// Tambahkan interface untuk opsi hook
 interface UsePackagesOptions {
   forAdmin?: boolean;
   limit?: number;
@@ -68,7 +69,6 @@ interface UsePackagesOptions {
   sortBy?: string;
 }
 
-// Sesuaikan tanda tangan fungsi usePackages
 export function usePackages(options?: UsePackagesOptions) {
   const { admin } = useAuth();
   const queryClient = useQueryClient();
@@ -77,13 +77,11 @@ export function usePackages(options?: UsePackagesOptions) {
 
   // --- QUERY UNTUK MENGAMBIL DAFTAR PAKET ---
   const {
-    data: responseData, // Perubahan: ganti nama 'packages' menjadi 'responseData'
+    data: responseData,
     isLoading,
     error,
     isRefetching,
   } = useQuery<PackagesResponse, Error>({
-    // Perubahan: Tipe data sekarang PackagesResponse
-    // Perubahan: queryKey sekarang mencakup semua opsi
     queryKey: ["tourPackages", options],
     queryFn: async () => {
       let headers: HeadersInit = {};
@@ -94,7 +92,6 @@ export function usePackages(options?: UsePackagesOptions) {
         headers = { Authorization: `Bearer ${admin.token}` };
       }
 
-      // Perubahan: Bangun URL dengan semua parameter
       const params = new URLSearchParams();
       if (options?.limit) params.append("limit", options.limit.toString());
       if (options?.page) params.append("page", options.page.toString());
@@ -120,13 +117,15 @@ export function usePackages(options?: UsePackagesOptions) {
       }
       const result: PackagesResponse = await response.json();
 
-      // Normalisasi harga tetap dilakukan
+      // Normalisasi data
       result.data = (result.data || []).map((pkg) => ({
         ...pkg,
         price:
           typeof pkg.price === "string"
             ? Number.parseFloat(pkg.price)
             : pkg.price,
+        // Pastikan features selalu array
+        features: Array.isArray(pkg.features) ? pkg.features : [],
       }));
 
       return result;
@@ -134,12 +133,10 @@ export function usePackages(options?: UsePackagesOptions) {
     enabled: options?.forAdmin ? !!admin?.token : true,
     staleTime: 1000 * 60 * 5,
     placeholderData: {
-      // Perubahan: placeholder yang lebih baik
       message: "",
       data: [],
       meta: { page: 1, limit: 10, count: 0 },
     },
-    // Perubahan: Hapus 'select' untuk sorting, karena sudah dilakukan di backend
   });
 
   // Efek samping untuk menampilkan error dari query
@@ -151,19 +148,26 @@ export function usePackages(options?: UsePackagesOptions) {
 
   // --- MUTASI UNTUK MEMBUAT PAKET ---
   const createPackageMutation = useMutation<
-    TourPackage, // Tipe data yang dikembalikan onSuccess
-    Error, // Tipe error
-    CreatePackageData // Tipe argumen untuk mutationFn
+    TourPackage,
+    Error,
+    CreatePackageData
   >({
     mutationFn: async (packageData) => {
       if (!admin?.token) throw new Error("Admin token not available.");
+
+      // Pastikan features dikirim sebagai array
+      const dataToSend = {
+        ...packageData,
+        features: packageData.features || [],
+      };
+
       const response = await fetch(`${API_HOST}/tour-packages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${admin.token}`,
         },
-        body: JSON.stringify(packageData),
+        body: JSON.stringify(dataToSend),
       });
 
       if (!response.ok) {
@@ -171,7 +175,7 @@ export function usePackages(options?: UsePackagesOptions) {
         throw new Error(errorData.message || "Gagal menambahkan paket wisata");
       }
       const result = await response.json();
-      const newPackage = result.data || result; // Sesuaikan jika API Anda mengembalikan data langsung
+      const newPackage = result.data || result;
 
       return {
         ...newPackage,
@@ -179,10 +183,10 @@ export function usePackages(options?: UsePackagesOptions) {
           typeof newPackage.price === "string"
             ? Number.parseFloat(newPackage.price)
             : newPackage.price,
+        features: Array.isArray(newPackage.features) ? newPackage.features : [],
       };
     },
     onSuccess: () => {
-      // Invalidate query untuk me-refetch daftar paket secara otomatis
       queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
       toast.success("Paket wisata berhasil ditambahkan!");
     },
@@ -193,12 +197,19 @@ export function usePackages(options?: UsePackagesOptions) {
 
   // --- MUTASI UNTUK MENGUPDATE PAKET ---
   const updatePackageMutation = useMutation<
-    TourPackage, // Tipe data yang dikembalikan onSuccess
-    Error, // Tipe error
-    UpdatePackageData // Tipe argumen untuk mutationFn
+    TourPackage,
+    Error,
+    UpdatePackageData
   >({
     mutationFn: async (packageData) => {
       if (!admin?.token) throw new Error("Admin token not available.");
+
+      // Pastikan features dikirim sebagai array jika ada
+      const dataToSend = {
+        ...packageData,
+        features: packageData.features || [],
+      };
+
       const response = await fetch(
         `${API_HOST}/tour-packages/${packageData.id}`,
         {
@@ -207,7 +218,7 @@ export function usePackages(options?: UsePackagesOptions) {
             "Content-Type": "application/json",
             Authorization: `Bearer ${admin.token}`,
           },
-          body: JSON.stringify(packageData),
+          body: JSON.stringify(dataToSend),
         }
       );
 
@@ -224,12 +235,13 @@ export function usePackages(options?: UsePackagesOptions) {
           typeof updatedPackage.price === "string"
             ? Number.parseFloat(updatedPackage.price)
             : updatedPackage.price,
+        features: Array.isArray(updatedPackage.features)
+          ? updatedPackage.features
+          : [],
       };
     },
     onSuccess: (updatedPackage) => {
-      // Invalidate query untuk me-refetch daftar paket
       queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
-      // Opsional: invalidasi query detail paket jika ada
       queryClient.invalidateQueries({
         queryKey: ["tourPackage", updatedPackage.id],
       });
@@ -257,7 +269,6 @@ export function usePackages(options?: UsePackagesOptions) {
       }
     },
     onSuccess: () => {
-      // Invalidate query untuk me-refetch daftar paket
       queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
       toast.success("Paket wisata berhasil dihapus!");
     },
@@ -266,11 +277,11 @@ export function usePackages(options?: UsePackagesOptions) {
     },
   });
 
-  // --- MUTASI BARU UNTUK UPDATE MAINIMAGEURL ---
+  // --- MUTASI UNTUK UPDATE MAINIMAGEURL ---
   const updateMainImageMutation = useMutation<
-    TourPackage, // Tipe data yang dikembalikan onSuccess
-    Error, // Tipe error
-    { packageId: number; imageUrl: string } // Tipe argumen untuk mutationFn
+    TourPackage,
+    Error,
+    { packageId: number; imageUrl: string }
   >({
     mutationFn: async ({ packageId, imageUrl }) => {
       if (!admin?.token) throw new Error("Admin token not available.");
@@ -281,7 +292,7 @@ export function usePackages(options?: UsePackagesOptions) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${admin.token}`,
         },
-        body: JSON.stringify({ mainImageUrl: imageUrl }), // Hanya kirim mainImageUrl
+        body: JSON.stringify({ mainImageUrl: imageUrl }),
       });
 
       if (!response.ok) {
@@ -298,12 +309,13 @@ export function usePackages(options?: UsePackagesOptions) {
           typeof updatedPackage.price === "string"
             ? Number.parseFloat(updatedPackage.price)
             : updatedPackage.price,
+        features: Array.isArray(updatedPackage.features)
+          ? updatedPackage.features
+          : [],
       };
     },
     onSuccess: (updatedPackage) => {
-      // Invalidate atau update cache untuk `tourPackages`
       queryClient.invalidateQueries({ queryKey: ["tourPackages"] });
-      // Invalidasi atau update cache untuk `tourPackage` detail (jika ada)
       queryClient.invalidateQueries({
         queryKey: ["tourPackage", updatedPackage.id],
       });

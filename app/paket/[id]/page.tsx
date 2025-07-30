@@ -21,6 +21,9 @@ import {
   Share2,
   Heart,
   Clock,
+  CheckCircle,
+  Package,
+  Info,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -279,31 +282,56 @@ export default function PackageDetailPage() {
                       </div>
                     </div>
 
-                    {/* Package Features */}
+                    {/* Package Features - Integrated with Database */}
                     <div>
-                      <h3 className="font-semibold text-lg mb-3">
+                      <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
                         Yang Termasuk dalam Paket
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {[
-                          "Tiket pesawat PP",
-                          "Visa Umroh",
-                          "Hotel bintang 4/5",
-                          "Transportasi AC",
-                          "Makan 3x sehari",
-                          "Pembimbing berpengalaman",
-                          "Ziarah lengkap",
-                          "Asuransi perjalanan",
-                        ].map((feature, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-amber-800 rounded-full"></div>
-                            <span className="text-sm text-gray-700">
-                              {feature}
+
+                      {packageDetail.features &&
+                      packageDetail.features.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {packageDetail.features.map((feature, index) => (
+                            <div
+                              key={index}
+                              className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100"
+                            >
+                              <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                              <span className="text-sm text-gray-800 leading-relaxed">
+                                {feature}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 rounded-lg p-6 text-center">
+                          <div className="text-gray-400 mb-2">
+                            <Package className="h-8 w-8 mx-auto" />
+                          </div>
+                          <p className="text-gray-500 text-sm">
+                            Fitur paket belum ditambahkan
+                          </p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            Admin dapat menambahkan fitur melalui dashboard
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Package Stats */}
+                    {packageDetail.features &&
+                      packageDetail.features.length > 0 && (
+                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                          <div className="flex items-center gap-2 text-blue-800">
+                            <Info className="h-4 w-4" />
+                            <span className="text-sm font-medium">
+                              Paket ini mencakup {packageDetail.features.length}{" "}
+                              fitur unggulan
                             </span>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+                        </div>
+                      )}
                   </div>
                 </CardContent>
               </Card>
