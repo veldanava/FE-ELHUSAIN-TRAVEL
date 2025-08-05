@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
       {
-        protocol: "http", // Pastikan protokolnya sesuai (http atau https)
+        protocol: "https", // Pastikan protokolnya sesuai (http atau https)
         hostname: "be-elhusain-travel.vercel.app",
         port: "3000", // Port backend Anda
         pathname: "/**", // Atau lebih umum: /uploads/**
